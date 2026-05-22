@@ -1,0 +1,57 @@
+<div class="container">
+<!-- 圆形遮罩层 -->
+    <div class="circle-mask">
+
+    <!-- 对话历史列表 -->
+        <list class="chat-list" id="chatList">
+            <list-item for="message in messages">
+                <div class="message-item">
+                <!-- 用户消息（右对齐） -->
+                    <div class="user-message" if="{{ message.role === 'user' }}">
+                        <div class="user-bubble">
+                            <text class="message-text user-text">{{ message.content }}</text>
+                        </div>
+                    </div>
+                <!-- AI消息（左对齐） -->
+                    <div class="ai-message" if="{{ message.role === 'assistant' }}">
+                        <div class="ai-bubble">
+                            <text class="message-text ai-text">{{ message.content }}</text>
+                        </div>
+                    </div>
+                </div>
+            </list-item>
+
+        <!-- AI正在输入指示器 -->
+            <list-item if="{{ isTyping }}">
+                <div class="message-item">
+                    <div class="ai-message">
+                        <div class="ai-bubble">
+                            <text class="typing-indicator">AI正在思考中...</text>
+                        </div>
+                    </div>
+                </div>
+            </list-item>
+        </list>
+
+    <!-- 底部输入区域 - 卡片式设计 -->
+        <div class="input-area" onclick="focusInput">
+        <!-- 输入框容器 -->
+            <div class="input-wrapper">
+                <input class="input-box"
+                       type="text"
+                       id="userInput"
+                       placeholder="点击输入"
+                       onchange="onInputChange"
+                       onfocus="onInputFocus"
+                       onblur="onInputBlur"
+                       focusable="true"
+                       value="{{ inputValue }}"/>
+            <!-- 发送按钮 - 有内容时显示 -->
+                <div class="send-wrapper" if="{{ inputValue && inputValue.length > 0 }}" onclick="sendMessage">
+                    <text class="send-icon">发送</text>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
