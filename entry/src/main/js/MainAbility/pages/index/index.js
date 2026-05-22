@@ -1,15 +1,12 @@
-import http from '@ohos.net.http';
-
 export default {
     data: {
         messages: [],
         inputValue: '',
-        isTyping: false,
-        apiKey: '你的API Key',
-        apiUrl: 'https://api.deepseek.com/v1/chat/completions'
+        isTyping: false
     },
 
     onInit() {
+        // 初始化欢迎消息
         this.messages = [
             {
                 role: 'assistant',
@@ -41,83 +38,56 @@ export default {
         this.inputValue = e.value;
     },
 
-    // 发送消息
+    // 发送消息（调试版：模拟AI回复）
     sendMessage() {
         let userMsg = this.inputValue;
         if (!userMsg || userMsg.trim() === '') {
             return;
         }
 
+        // 添加用户消息
         this.messages.push({
             role: 'user',
             content: userMsg
         });
 
+        // 清空输入框
         this.inputValue = '';
+        // 显示AI正在输入
         this.isTyping = true;
 
-        this.callAIAPI(userMsg);
+        // 模拟AI回复（延迟1秒）
+        this.simulateAIResponse(userMsg);
     },
 
-    // 调用AI API
-    callAIAPI(userMessage) {
-        let httpRequest = http.createHttp();
-
-        let requestBody = {
-            model: 'deepseek-chat',
-            messages: this.buildMessages(userMessage),
-            temperature: 0.7,
-            max_tokens: 500
-        };
-
-        httpRequest.request(
-            this.apiUrl,
-            {
-                method: http.RequestMethod.POST,
-                header: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + this.apiKey
-                },
-                extraData: JSON.stringify(requestBody),
-                readTimeout: 60000
-            },
-            (err, data) => {
-                if (!err && data.responseCode === 200) {
-                    let response = JSON.parse(data.result);
-                    let aiResponse = response.choices[0].message.content;
-                    this.addAIResponse(aiResponse);
-                } else {
-                    console.error('API请求失败: ' + JSON.stringify(err));
-                    this.addAIResponse('抱歉，服务暂时不可用，请稍后再试。');
-                }
-                httpRequest.destroy();
-            }
-        );
+    // 模拟AI回复（调试用）
+    simulateAIResponse(userMsg) {
+        setTimeout(() => {
+            // 根据用户消息生成不同的模拟回复
+            let reply = this.getMockReply(userMsg);
+            this.addAIResponse(reply);
+        }, 1000);
     },
 
-    // 构建消息历史
-    buildMessages(currentUserMessage) {
-        let history = [];
+    // 模拟回复内容
+    getMockReply(userMsg) {
+        let msg = userMsg.toLowerCase();
 
-        history.push({
-            role: 'system',
-            content: '你是一个智能手表上的AI助手，回答需要简洁明了，适合手表小屏幕阅读。'
-        });
-
-        let startIdx = Math.max(0, this.messages.length - 9);
-        for (let i = startIdx; i < this.messages.length; i++) {
-            history.push({
-                role: this.messages[i].role,
-                content: this.messages[i].content
-            });
+        if (msg.includes('你好') || msg.includes('您好')) {
+            return '你好！很高兴为你服务。';
+        } else if (msg.includes('天气')) {
+            return '今天天气不错，温度25°C，适合户外活动。';
+        } else if (msg.includes('时间') || msg.includes('几点')) {
+            let now = new Date();
+            return `现在是 ${now.getHours()}:${now.getMinutes()}。`;
+        } else if (msg.includes('谢谢')) {
+            return '不客气，有问题随时问我！';
+        } else if (msg.includes('帮助')) {
+            return '我可以回答问题、查询天气、提醒事项等，试试问我吧！';
+        } else {
+            // 默认回复：回显用户消息
+            return `你说的是："${userMsg}"\n\n（这是调试回复，接入API后我会更智能！）`;
         }
-
-        history.push({
-            role: 'user',
-            content: currentUserMessage
-        });
-
-        return history;
     },
 
     // 添加AI响应
@@ -127,5 +97,15 @@ export default {
             role: 'assistant',
             content: content
         });
+    },
+
+    // 清空对话（可选功能）
+    clearChat() {
+        this.messages = [
+            {
+                role: 'assistant',
+                content: '有什么可以帮忙的？'
+            }
+        ];
     }
 }

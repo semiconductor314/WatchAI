@@ -1,5 +1,4 @@
 <div class="container">
-<!-- 圆形遮罩层 -->
     <div class="circle-mask">
 
     <!-- 对话历史列表 -->
@@ -33,9 +32,8 @@
             </list-item>
         </list>
 
-    <!-- 底部输入区域 - 卡片式设计 -->
+    <!-- 底部输入区域 -->
         <div class="input-area" onclick="focusInput">
-        <!-- 输入框容器 -->
             <div class="input-wrapper">
                 <input class="input-box"
                        type="text"

@@ -1,6 +1,20 @@
 {
   "app": {
-    "signingConfigs": [],
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "C:\\Users\\33824\\.ohos\\config\\auto_debug_WatchAI_com.semi.watchai_10086000942360111.cer",
+          "storePassword": "0000001B2A87A4A76977BBC7788C5DAF80132068BC49E683FC58F0F3587D4643C2A86532242EC65F236010",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001B3B2BD3EAB0B19B5346C8973EC99020234E12887E2559B668396697E2F22FF1E5A91093E0AB62F8",
+          "profile": "C:\\Users\\33824\\.ohos\\config\\auto_debug_WatchAI_com.semi.watchai_10086000942360111.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "C:\\Users\\33824\\.ohos\\config\\auto_debug_WatchAI_com.semi.watchai_10086000942360111.p12"
+        }
+      }
+    ],
     "compileSdkVersion": 8,
     "compatibleSdkVersion": 8,
     "products": [
