@@ -1,0 +1,50 @@
+<div class="container">
+    <div class="circle-mask">
+
+    <!-- 顶部返回按钮（简化版） -->
+        <div class="top-bar">
+            <div class="back-btn" onclick="backToHome">
+                <text class="back-icon">&lt; 返回</text>
+            </div>
+        </div>
+
+    <!-- 对话历史列表 -->
+        <list class="chat-list" id="chatList">
+            <list-item for="message in messages">
+                <div class="message-item">
+                    <div class="user-message" if="{{ message.role === 'user' }}">
+                        <text class="message-text user-text">{{ message.content }}</text>
+                    </div>
+                    <div class="ai-message" if="{{ message.role === 'assistant' }}">
+                        <text class="message-text ai-text">{{ message.content }}</text>
+                    </div>
+                </div>
+            </list-item>
+
+            <list-item if="{{ isTyping }}">
+                <div class="message-item">
+                    <div class="typing-indicator">
+                        <text class="typing-dot">●</text>
+                        <text class="typing-dot">●</text>
+                        <text class="typing-dot">●</text>
+                    </div>
+                </div>
+            </list-item>
+        </list>
+
+    <!-- 底部输入区域 -->
+        <div class="input-area">
+            <input class="input-box"
+                   type="text"
+                   id="messageInput"
+                   placeholder="输入消息..."
+                   onchange="onInputChange"
+                   focusable="true"
+                   value="{{ inputValue }}"/>
+            <div class="send-btn" onclick="sendMessage">
+                <text class="send-icon">➤</text>
+            </div>
+        </div>
+
+    </div>
+</div>

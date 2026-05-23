@@ -1,55 +1,13 @@
 <div class="container">
-    <div class="circle-mask">
-
-    <!-- 对话历史列表 -->
-        <list class="chat-list" id="chatList">
-            <list-item for="message in messages">
-                <div class="message-item">
-                <!-- 用户消息（右对齐） -->
-                    <div class="user-message" if="{{ message.role === 'user' }}">
-                        <div class="user-bubble">
-                            <text class="message-text user-text">{{ message.content }}</text>
-                        </div>
-                    </div>
-                <!-- AI消息（左对齐） -->
-                    <div class="ai-message" if="{{ message.role === 'assistant' }}">
-                        <div class="ai-bubble">
-                            <text class="message-text ai-text">{{ message.content }}</text>
-                        </div>
-                    </div>
-                </div>
-            </list-item>
-
-        <!-- AI正在输入指示器 -->
-            <list-item if="{{ isTyping }}">
-                <div class="message-item">
-                    <div class="ai-message">
-                        <div class="ai-bubble">
-                            <text class="typing-indicator">AI正在思考中...</text>
-                        </div>
-                    </div>
-                </div>
-            </list-item>
-        </list>
-
-    <!-- 底部输入区域 -->
-        <div class="input-area" onclick="focusInput">
-            <div class="input-wrapper">
-                <input class="input-box"
-                       type="text"
-                       id="userInput"
-                       placeholder="点击输入"
-                       onchange="onInputChange"
-                       onfocus="onInputFocus"
-                       onblur="onInputBlur"
-                       focusable="true"
-                       value="{{ inputValue }}"/>
-            <!-- 发送按钮 - 有内容时显示 -->
-                <div class="send-wrapper" if="{{ inputValue && inputValue.length > 0 }}" onclick="sendMessage">
-                    <text class="send-icon">发送</text>
-                </div>
-            </div>
+    <div class="button-wrapper">
+    <!-- 上方：主按钮 -->
+        <div class="start-btn" onclick="openChat">
+            <text class="start-text">开启对话</text>
         </div>
 
+    <!-- 下方：设置按钮 -->
+        <div class="settings-btn" onclick="openSettings">
+            <text class="settings-text">设置</text>
+        </div>
     </div>
 </div>
