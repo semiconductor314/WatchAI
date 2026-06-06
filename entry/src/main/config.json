@@ -49,7 +49,8 @@
     "js": [
       {
         "pages": [
-          "pages/index/index"
+          "pages/index/index",
+          "pages/chat/chat"
         ],
         "name": ".MainAbility",
         "window": {

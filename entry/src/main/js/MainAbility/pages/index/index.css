@@ -1,121 +1,60 @@
-/* 主容器 - 466x466 圆形屏幕 */
+/* ============================================
+   主容器 - 整个屏幕
+   ============================================ */
 .container {
-    display: flex;
-    flex-direction: column;
     width: 100%;
     height: 100%;
-    background-color: #1a1a2e;
-    border-radius: 233px;
-    overflow: hidden;
-}
-
-/* 圆形遮罩层 */
-.circle-mask {
     display: flex;
-    flex-direction: column;
-    width: 100%;
-    height: 100%;
-    padding: 70px 24px 35px 24px;
+    justify-content: center;      /* 水平居中 */
+    align-items: center;          /* 垂直居中 */
+    background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+/* 深蓝紫色渐变背景 */
 }
 
-/* 对话列表区域 */
-.chat-list {
-    flex: 1;
-    width: 100%;
-}
-
-/* 每条消息的容器 */
-.message-item {
-    width: 100%;
-    margin-bottom: 14px;
-}
-
-/* 用户消息容器（右对齐） */
-.user-message {
+/*  按钮包装器 - 负责上下排列 */
+.button-wrapper {
     display: flex;
-    justify-content: flex-end;
-    margin-right: 30px;
+    flex-direction: column;       /* 垂直排列（上下） */
+    align-items: center;          /* 水平居中 */
+    justify-content: center;      /* 垂直居中 */
 }
 
-/* 用户消息气泡 */
-.user-text {
-    background-color: #0f3460;
-    color: #e0e0e0;
-    border-radius: 24px;
-    padding: 12px 16px;
-    max-width: 72%;
-    font-size: 30px;
-}
 
-/* AI消息容器（左对齐） */
-.ai-message {
+/* 上方主按钮 - 开启对话*/
+.start-btn {
+    width: 360px;                 /* 按钮宽度 */
+    height: 160px;                /* 按钮高度 */
+    border-radius: 40px;          /* 圆角 */
+    background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+/* 霓虹蓝渐变 */
     display: flex;
-    justify-content: flex-start;
-    margin-left: 30px;
-}
-
-/* AI消息气泡 */
-.ai-text {
-    background-color: #000000;   /* AI 消息气泡背景*/
-    color: #ffffff;              /* AI 消息气泡字 */
-    border-radius: 24px;
-    padding: 12px 16px;
-    max-width: 85%;
-    font-size: 38px              /* 仅支持 30px 38px*/
-}
-
-/* ========== 卡片式输入框样式 ========== */
-
-/* 底部输入区域 - 卡片式设计 */
-.input-area {
-    margin-bottom: 15px;
-    margin-left: 5px;
-    margin-right: 5px;
-}
-
-/* 输入框包装器 - 圆角卡片效果 */
-.input-wrapper {
-    display: flex;
-    flex-direction: row;
+    justify-content: center;
     align-items: center;
-    background-color: #2a2a3e;
-    border-radius: 36px;
-    padding: 6px 8px 6px 20px;
-    border: 1px solid #3a4e6e;
+    margin-bottom: 30px;          /* 与下方按钮的间距 */
+    border: 1px solid rgba(255,255,255,0.2);
 }
 
-/* 输入框 - 无边框设计 */
-.input-box {
-    flex: 1;
-    height: 44px;
-    background-color: transparent;
-    color: #ffffff;
-    font-size: 16px;
-    padding: 0;
-    border: none;
-}
-
-/* ❌ 删除 placeholder 样式 - API 3.0 不支持 */
-/* 占位文字颜色使用 input 组件的 placeholder 属性自带样式 */
-
-/* 发送按钮包装器 */
-.send-wrapper {
-    background: linear-gradient(135deg, #0f3460 0%, #1a4a7a 100%);
-    border-radius: 32px;
-    padding: 8px 18px;
-    margin-left: 12px;
-}
-
-/* 发送按钮文字 */
-.send-icon {
-    color: #ffffff;
-    font-size: 15px;
+/* 主按钮文字 */
+.start-text {
+    font-size: 42px;
     font-weight: bold;
+    color: #ffffff;
+}
+/* 下方按钮 - 设置 */
+.settings-btn {
+    width: 140px;                 /* 按钮宽度（比主按钮窄） */
+    height: 80px;                 /* 按钮高度（比主按钮矮） */
+    border-radius: 30px;          /* 圆角（胶囊形） */
+    background-color: rgba(255,255,255,0.08);
+/* 半透明白色背景 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid rgba(255,255,255,0.15);
 }
 
-/* 正在输入指示器 */
-.typing-indicator {
-    font-size: 14px;
+/* 设置按钮文字 */
+.settings-text {
+    font-size: 24px;
     color: #aaccff;
-    font-style: italic;
 }

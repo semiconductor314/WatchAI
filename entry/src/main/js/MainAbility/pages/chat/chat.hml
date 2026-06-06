@@ -1,0 +1,50 @@
+<div class="container">
+    <div class="circle-mask">
+
+    <!-- 顶部返回按钮 -->
+        <div class="top-bar">
+            <div class="back-btn" onclick="backToHome">
+                <text class="back-icon">&lt; 返回</text>
+            </div>
+        </div>
+
+    <!-- 对话历史列表 - 使用 div 滚动 -->
+        <div class="chat-scroll" id="chatScroll">
+        <!-- 使用 for 循环遍历消息 -->
+            <div for="message in messages" class="message-item">
+            <!-- 用户消息 -->
+                <div class="user-message" if="{{ message.role === 'user' }}">
+                    <text class="message-text user-text">{{ message.content }}</text>
+                </div>
+            <!-- AI消息 -->
+                <div class="ai-message" if="{{ message.role === 'assistant' }}">
+                    <text class="message-text ai-text">{{ message.content }}</text>
+                </div>
+            </div>
+
+        <!-- AI正在输入 -->
+            <div if="{{ isTyping }}" class="message-item">
+                <div class="typing-indicator">
+                    <text class="typing-dot">●</text>
+                    <text class="typing-dot">●</text>
+                    <text class="typing-dot">●</text>
+                </div>
+            </div>
+        </div>
+
+    <!-- 底部输入区域 -->
+        <div class="input-area">
+            <input class="input-box"
+                   type="text"
+                   id="messageInput"
+                   placeholder="输入"
+                   onchange="onInputChange"
+                   focusable="true"
+                   value="{{ inputValue }}"/>
+            <div class="send-btn" onclick="sendMessage">
+                <text class="send-icon">➤</text>
+            </div>
+        </div>
+
+    </div>
+</div>
