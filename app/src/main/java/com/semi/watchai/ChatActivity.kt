@@ -182,6 +182,8 @@ class ChatActivity : AppCompatActivity() {
                 val modelOnline = fresh?.modelOnline ?: providerRepository.modelOnline()
                 // 提示词：该对话已存 ?? 全局选中；"默认"恒可解析，无 null 分支
                 val promptId = fresh?.promptId ?: promptRepository.selectedPromptId()
+                // 上下文选择：该对话已存 ?? 全局默认（"all"）
+                val contextMode = fresh?.contextMode ?: providerRepository.contextMode()
                 val systemPrompt = promptRepository.promptById(promptId).content
 
                 // 首页设置只作为"新建对话"的默认值：
@@ -190,20 +192,24 @@ class ChatActivity : AppCompatActivity() {
                 if (fresh != null &&
                     (fresh.providerId != provider.id ||
                         fresh.modelOnline != modelOnline ||
-                        fresh.promptId != promptId)
+                        fresh.promptId != promptId ||
+                        fresh.contextMode != contextMode)
                 ) {
                     chatRepository.updateChatSettings(
                         chatId,
                         providerId = provider.id,
                         modelOnline = modelOnline,
-                        promptId = promptId
+                        promptId = promptId,
+                        contextMode = contextMode
                     )
                 }
 
+                // 按上下文选择模式裁剪历史后再发送
+                val requestMessages = MessageContextFilter.filter(chat.messages, contextMode)
                 val reply = DeepSeekApi.chatCompletion(
                     provider.baseUrl,
                     provider.apiKey,
-                    chat.messages,
+                    requestMessages,
                     modelOnline,
                     systemPrompt
                 )
