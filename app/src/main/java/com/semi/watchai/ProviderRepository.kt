@@ -23,6 +23,11 @@ class ProviderRepository(private val context: Context) {
         private val KEY_PROVIDERS = stringPreferencesKey("providers_json")
         private val KEY_SELECTED = stringPreferencesKey("selected_provider_id")
         private val KEY_MODEL_ONLINE = booleanPreferencesKey("model_online")
+        private val KEY_CONTEXT_MODE = stringPreferencesKey("context_mode")
+
+        const val CONTEXT_MODE_ALL = "all"
+        const val CONTEXT_MODE_LAST = "last"
+        const val CONTEXT_MODE_NONE = "none"
 
         // 默认 DeepSeek 供应商（沿用原硬编码 key，保证首次启动即可用）
         private fun defaultProvider() = AiProvider(
@@ -85,5 +90,14 @@ class ProviderRepository(private val context: Context) {
     /** 设置全局"模型联网"默认值。 */
     suspend fun setModelOnline(enabled: Boolean) {
         context.providerDataStore.edit { it[KEY_MODEL_ONLINE] = enabled }
+    }
+
+    /** 全局"上下文选择"默认值（每对话可单独覆盖）。 */
+    suspend fun contextMode(): String =
+        context.providerDataStore.data.first()[KEY_CONTEXT_MODE] ?: CONTEXT_MODE_ALL
+
+    /** 设置全局"上下文选择"默认值。 */
+    suspend fun setContextMode(mode: String) {
+        context.providerDataStore.edit { it[KEY_CONTEXT_MODE] = mode }
     }
 }
