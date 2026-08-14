@@ -13,7 +13,9 @@ data class ChatEntity(
     // 每对话设置（null = 未单独设置，回退到全局设置）
     var providerId: String? = null,
     var modelOnline: Boolean? = null,
-    var promptId: String? = null
+    var promptId: String? = null,
+    // 每对话上下文选择（null = 未单独设置，回退到全局设置）
+    var contextMode: String? = null
 )
 
 @Entity(

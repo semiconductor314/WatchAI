@@ -17,7 +17,8 @@ class ChatRepository(private val dao: ChatDao) {
                     createdAt = entity.createdAt,
                     providerId = entity.providerId,
                     modelOnline = entity.modelOnline,
-                    promptId = entity.promptId
+                    promptId = entity.promptId,
+                    contextMode = entity.contextMode
                 )
             }
         }
@@ -41,7 +42,8 @@ class ChatRepository(private val dao: ChatDao) {
             createdAt = entity.createdAt,
             providerId = entity.providerId,
             modelOnline = entity.modelOnline,
-            promptId = entity.promptId
+            promptId = entity.promptId,
+            contextMode = entity.contextMode
         )
     }
 
@@ -67,14 +69,16 @@ class ChatRepository(private val dao: ChatDao) {
         title: String = "新聊天",
         providerId: String? = null,
         modelOnline: Boolean? = null,
-        promptId: String? = null
+        promptId: String? = null,
+        contextMode: String? = null
     ): Chat {
         val chat = Chat(
             id = java.util.UUID.randomUUID().toString(),
             title = title,
             providerId = providerId,
             modelOnline = modelOnline,
-            promptId = promptId
+            promptId = promptId,
+            contextMode = contextMode
         )
         dao.insertChat(
             ChatEntity(
@@ -83,7 +87,8 @@ class ChatRepository(private val dao: ChatDao) {
                 createdAt = chat.createdAt,
                 providerId = chat.providerId,
                 modelOnline = chat.modelOnline,
-                promptId = chat.promptId
+                promptId = chat.promptId,
+                contextMode = chat.contextMode
             )
         )
         return chat
@@ -101,12 +106,14 @@ class ChatRepository(private val dao: ChatDao) {
         chatId: String,
         providerId: String? = null,
         modelOnline: Boolean? = null,
-        promptId: String? = null
+        promptId: String? = null,
+        contextMode: String? = null
     ) {
         val entity = dao.getChatById(chatId) ?: return
         if (providerId != null) entity.providerId = providerId
         if (modelOnline != null) entity.modelOnline = modelOnline
         if (promptId != null) entity.promptId = promptId
+        if (contextMode != null) entity.contextMode = contextMode
         dao.updateChat(entity)
     }
 

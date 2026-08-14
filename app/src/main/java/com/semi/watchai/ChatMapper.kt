@@ -11,7 +11,8 @@ object ChatMapper {
             createdAt = entity.createdAt,
             providerId = entity.providerId,
             modelOnline = entity.modelOnline,
-            promptId = entity.promptId
+            promptId = entity.promptId,
+            contextMode = entity.contextMode
         )
     }
 
@@ -23,7 +24,8 @@ object ChatMapper {
             createdAt = chat.createdAt,
             providerId = chat.providerId,
             modelOnline = chat.modelOnline,
-            promptId = chat.promptId
+            promptId = chat.promptId,
+            contextMode = chat.contextMode
         )
     }
 
