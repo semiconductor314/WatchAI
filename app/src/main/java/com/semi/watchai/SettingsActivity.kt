@@ -31,10 +31,11 @@ class SettingsActivity : AppCompatActivity(), AiSettingsFragment.Listener {
                 val selectedId = providerRepository.selectedProvider()?.id
                 val modelOnline = providerRepository.modelOnline()
                 val promptId = promptRepository.selectedPromptId()
+                val contextMode = providerRepository.contextMode()
                 supportFragmentManager.beginTransaction()
                     .replace(
                         R.id.settingsFragmentContainer,
-                        AiSettingsFragment.newInstance(selectedId, modelOnline, promptId, true)
+                        AiSettingsFragment.newInstance(selectedId, modelOnline, promptId, true, contextMode)
                     )
                     .commit()
             }
@@ -57,6 +58,12 @@ class SettingsActivity : AppCompatActivity(), AiSettingsFragment.Listener {
     override fun onModelOnlineChanged(enabled: Boolean) {
         lifecycleScope.launch {
             providerRepository.setModelOnline(enabled)
+        }
+    }
+
+    override fun onContextModeSelected(mode: String) {
+        lifecycleScope.launch {
+            providerRepository.setContextMode(mode)
         }
     }
 }
