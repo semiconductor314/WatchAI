@@ -371,8 +371,8 @@ git commit -m "feat: MessageContextFilter 按上下文模式裁剪消息（含�
 
 - [ ] **Step 2: 编译验证**
 
-Run: `JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" ./gradlew compileDebugKotlin`
-Expected: BUILD SUCCESSFUL（资源编译通过）。
+Run: `JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" ./gradlew processDebugResources`
+Expected: BUILD SUCCESSFUL（XML 布局资源链接通过；`compileDebugKotlin` 不处理资源，故用 process 任务验证）。
 
 - [ ] **Step 3: 提交**
 
@@ -394,10 +394,10 @@ git commit -m "feat: 设置页布局新增上下文选择下拉框"
 
 - [ ] **Step 1: 扩展 Listener 接口与字段**
 
-`interface Listener` 内加：
+`interface Listener` 内加（**默认空实现**，避免破坏未更新的宿主 Activity——Task 6/7 再真正 override）：
 
 ```kotlin
-fun onContextModeSelected(mode: String)
+fun onContextModeSelected(mode: String) {}
 ```
 
 字段区加：
