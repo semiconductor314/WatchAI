@@ -182,7 +182,7 @@ class ChatActivity : AppCompatActivity() {
                 val modelOnline = fresh?.modelOnline ?: providerRepository.modelOnline()
                 // 提示词：该对话已存 ?? 全局选中；"默认"恒可解析，无 null 分支
                 val promptId = fresh?.promptId ?: promptRepository.selectedPromptId()
-                // 上下文选择：该对话已存 ?? 全局默认（"all"）
+                // 上下文选择：该对话已存 ?? 全局默认（CONTEXT_MODE_ALL）
                 val contextMode = fresh?.contextMode ?: providerRepository.contextMode()
                 val systemPrompt = promptRepository.promptById(promptId).content
 

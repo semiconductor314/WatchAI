@@ -96,8 +96,9 @@ class LeftPageFragment : Fragment() {
             val providerId = providerRepo.selectedProvider()?.id
             val modelOnline = providerRepo.modelOnline()
             val promptId = promptRepo.selectedPromptId()
+            val contextMode = providerRepo.contextMode()
 
-            val newChat = chatRepository.createChat("新聊天", providerId, modelOnline, promptId)
+            val newChat = chatRepository.createChat("新聊天", providerId, modelOnline, promptId, contextMode)
             dataList.add(0, newChat)
             adapter.notifyItemInserted(0)
 

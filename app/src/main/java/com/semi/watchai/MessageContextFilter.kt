@@ -5,7 +5,7 @@ package com.semi.watchai
  *
  * 语义（与设计文档一致）：
  * - CONTEXT_MODE_ALL  ("all") ：返回全部消息（默认行为）。
- * - CONTEXT_MODE_LAST ("last")：当前消息 + 其前最近一轮完整问答（上一轮 user + 之后 assistant 回复）。
+ * - CONTEXT_MODE_LAST ("last")：当前消息 + 其前最近的 user 消息起的全部消息（上一轮提问；其后可能无 assistant 回复）。
  * - CONTEXT_MODE_NONE ("none")：仅当前消息（最后一条）。
  */
 object MessageContextFilter {
@@ -24,7 +24,7 @@ object MessageContextFilter {
     }
 
     /**
-     * 当前消息（最后一条）之前最近一轮完整问答 + 当前消息。
+     * 当前消息 + 其前最近的 user 消息起的全部消息（上一轮提问；其后可能无 assistant 回复）。
      * 规则：从倒数第二起向前扫描最近的 user 消息（上一轮提问），从它开始截取；
      * 找不到（当前是首条消息）时仅返回当前消息。
      */
@@ -32,7 +32,7 @@ object MessageContextFilter {
         val currentIndex = messages.lastIndex
         for (i in currentIndex - 1 downTo 0) {
             if (messages[i].isUser) {
-                return messages.subList(i, messages.size)
+                return messages.subList(i, messages.size).toList()
             }
         }
         return listOf(messages.last())
