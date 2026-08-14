@@ -48,11 +48,12 @@ class ChatSettingsActivity : AppCompatActivity(), AiSettingsFragment.Listener {
                 val providerId = chat.providerId ?: providerRepository.selectedProvider()?.id
                 val modelOnline = chat.modelOnline ?: providerRepository.modelOnline()
                 val promptId = chat.promptId ?: promptRepository.selectedPromptId()
+                val contextMode = chat.contextMode ?: providerRepository.contextMode()
 
                 supportFragmentManager.beginTransaction()
                     .replace(
                         R.id.settingsFragmentContainer,
-                        AiSettingsFragment.newInstance(providerId, modelOnline, promptId, false)
+                        AiSettingsFragment.newInstance(providerId, modelOnline, promptId, false, contextMode)
                     )
                     .commit()
             }
@@ -75,6 +76,12 @@ class ChatSettingsActivity : AppCompatActivity(), AiSettingsFragment.Listener {
     override fun onModelOnlineChanged(enabled: Boolean) {
         lifecycleScope.launch {
             chatRepository.updateChatSettings(chatId, modelOnline = enabled)
+        }
+    }
+
+    override fun onContextModeSelected(mode: String) {
+        lifecycleScope.launch {
+            chatRepository.updateChatSettings(chatId, contextMode = mode)
         }
     }
 }
