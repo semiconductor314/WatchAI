@@ -39,6 +39,7 @@ class AiSettingsFragment : Fragment() {
         fun onProviderSelected(providerId: String)
         fun onPromptSelected(promptId: String)
         fun onModelOnlineChanged(enabled: Boolean)
+        fun onContextModeSelected(mode: String) {}
     }
 
     var listener: Listener? = null
@@ -55,6 +56,7 @@ class AiSettingsFragment : Fragment() {
     private lateinit var llPromptSelector: LinearLayout
     private lateinit var tvSelectedPrompt: TextView
     private lateinit var switchModelOnline: Switch
+    private lateinit var spinnerContextMode: Spinner
 
     private val providers = mutableListOf<AiProvider>()
     private val prompts = mutableListOf<Prompt>()
@@ -64,6 +66,15 @@ class AiSettingsFragment : Fragment() {
     private var initialModelOnline = false
     private var initialPromptId: String? = null
     private var allowManagement = true
+
+    // 上下文选择选项（显示名 -> 存储值），顺序即下拉顺序
+    private val contextModeOptions = listOf(
+        "包含全部上下文" to ProviderRepository.CONTEXT_MODE_ALL,
+        "只包含上条上下文" to ProviderRepository.CONTEXT_MODE_LAST,
+        "不包含上下文" to ProviderRepository.CONTEXT_MODE_NONE
+    )
+
+    private var initialContextMode = ProviderRepository.CONTEXT_MODE_ALL
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -78,12 +89,14 @@ class AiSettingsFragment : Fragment() {
         llPromptSelector = view.findViewById(R.id.llPromptSelector)
         tvSelectedPrompt = view.findViewById(R.id.tvSelectedPrompt)
         switchModelOnline = view.findViewById(R.id.switchModelOnline)
+        spinnerContextMode = view.findViewById(R.id.spinnerContextMode)
 
         arguments?.let {
             initialProviderId = it.getString(ARG_PROVIDER_ID)
             initialModelOnline = it.getBoolean(ARG_MODEL_ONLINE, false)
             initialPromptId = it.getString(ARG_PROMPT_ID)
             allowManagement = it.getBoolean(ARG_ALLOW_MANAGEMENT, true)
+            initialContextMode = it.getString(ARG_CONTEXT_MODE) ?: ProviderRepository.CONTEXT_MODE_ALL
         }
 
         // 对话设置页不显示管理按钮（新建提示词 / 新建供应商）
@@ -147,6 +160,24 @@ class AiSettingsFragment : Fragment() {
                 override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
             }
 
+        spinnerContextMode.onItemSelectedListener =
+            object : android.widget.AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(
+                    parent: android.widget.AdapterView<*>?,
+                    view: android.view.View?,
+                    position: Int,
+                    id: Long
+                ) {
+                    if (restoringSelection) return
+                    if (position in contextModeOptions.indices) {
+                        listener?.onContextModeSelected(contextModeOptions[position].second)
+                    }
+                }
+
+                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+            }
+
+        refreshContextModeSpinner()
         loadProviders()
         loadPrompts()
         return view
@@ -193,6 +224,24 @@ class AiSettingsFragment : Fragment() {
         val index = providers.indexOfFirst { it.id == initialProviderId }
         if (index >= 0) {
             spinnerProvider.setSelection(index)
+        }
+        restoringSelection = false
+    }
+
+    private fun refreshContextModeSpinner() {
+        val adapter = ArrayAdapter(
+            requireContext(),
+            R.layout.spinner_item,
+            contextModeOptions.map { it.first }
+        )
+        adapter.setDropDownViewResource(R.layout.spinner_item)
+
+        // 恢复选中时不触发保存逻辑（onItemSelected 同步回调）
+        restoringSelection = true
+        spinnerContextMode.adapter = adapter
+        val index = contextModeOptions.indexOfFirst { it.second == initialContextMode }
+        if (index >= 0) {
+            spinnerContextMode.setSelection(index)
         }
         restoringSelection = false
     }
@@ -466,12 +515,14 @@ class AiSettingsFragment : Fragment() {
         private const val ARG_MODEL_ONLINE = "arg_model_online"
         private const val ARG_PROMPT_ID = "arg_prompt_id"
         private const val ARG_ALLOW_MANAGEMENT = "arg_allow_management"
+        private const val ARG_CONTEXT_MODE = "arg_context_mode"
 
         fun newInstance(
             providerId: String?,
             modelOnline: Boolean,
             promptId: String?,
-            allowManagement: Boolean
+            allowManagement: Boolean,
+            contextMode: String = ProviderRepository.CONTEXT_MODE_ALL
         ): AiSettingsFragment {
             return AiSettingsFragment().apply {
                 arguments = Bundle().apply {
@@ -479,6 +530,7 @@ class AiSettingsFragment : Fragment() {
                     putBoolean(ARG_MODEL_ONLINE, modelOnline)
                     putString(ARG_PROMPT_ID, promptId)
                     putBoolean(ARG_ALLOW_MANAGEMENT, allowManagement)
+                    putString(ARG_CONTEXT_MODE, contextMode)
                 }
             }
         }
