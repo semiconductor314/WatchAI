@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- res/drawable/gradient_button.xml -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle"> <!-- 形状为矩形 -->
+
+    <!-- 定义渐变色 -->
+    <gradient
+        android:startColor="#8A65F0"
+        android:endColor="#4D87D3"
+        android:angle="0" />         <!-- 渐变角度，0表示从左到右，45表示从左下到右上，135表示从左上到右下（最常用） -->
+
+    <!-- 可选：设置圆角 -->
+    <corners android:radius="12dp" />
+
+</shape>

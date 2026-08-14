@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/popup_background"
+    android:padding="4dp"
+    android:elevation="4dp">
+
+    <!-- 按钮1 -->
+    <Button
+        android:id="@+id/btnOption1"
+        android:layout_width="120dp"
+        android:layout_height="48dp"
+        android:text="重命名"
+        android:textSize="12sp"
+        android:background="#333333"
+        android:textColor="#FFFFFF"
+        android:gravity="center" />
+
+    <!-- 按钮2 -->
+    <Button
+        android:id="@+id/btnOption2"
+        android:layout_width="120dp"
+        android:layout_height="48dp"
+        android:layout_marginTop="4dp"
+        android:text="删除"
+        android:textSize="12sp"
+        android:background="#333333"
+        android:textColor="#E15757"
+        android:gravity="center" />
+
+</LinearLayout>
