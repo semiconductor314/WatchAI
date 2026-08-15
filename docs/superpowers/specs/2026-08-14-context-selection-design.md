@@ -170,8 +170,36 @@ val requestMessages = when (contextMode) {
 - 对话设置页改动只影响该对话；首页改动作为新对话默认值。
 - 全新对话（无 assistant 回复）选择 `"last"` 时退化为仅当前消息，请求不失败。
 
+## 旧对话 contextMode 一次性回填（2026-08-15 增补，已批准）
+
+### 目标不变式
+
+首页"上下文选择"只作为**新建对话**的默认值；**所有已有对话**（含 contextMode 仍为 NULL 的旧对话）完全不受首页改动影响。
+
+### 问题
+
+contextMode 是升级前不存在的列，**所有**旧对话的 `contextMode` 都是 NULL。NULL 的语义是"跟随全局"，故 `ChatActivity` 中 `fresh?.contextMode ?: providerRepository.contextMode()` 会让首页改动漏进旧对话，直到首次发送触发快照写回才冻结。
+
+### 方案：一次性回填（仅 contextMode 范围）
+
+1. **`ChatDao.backfillNullContextMode(mode: String)`**：`UPDATE chats SET contextMode = :mode WHERE contextMode IS NULL`。幂等（回填后无 NULL）。
+2. **`ChatRepository.backfillNullContextMode(mode: String)`**：委托 DAO。
+3. **`ProviderRepository` 一次性标志**：DataStore key `context_mode_backfilled`（boolean）+ `isContextModeBackfilled()` / `markContextModeBackfilled()`。
+4. **触发点（标志守卫，只执行一次）**：
+   - `LeftPageFragment.loadChats()`（主入口）：首页设置页只能从首页进入，故任何全局改动前回填必已完成。
+   - `ChatActivity.onCreate()`（兜底）：覆盖进程被杀后直接恢复到对话页、从未经过首页的场景。
+   - 回填值为触发时刻的当前全局值；老用户升级后首次进首页时该值即升级前实际生效值（默认 `"all"`）。
+5. **发送路径不变**：`fresh?.contextMode ?: 全局` 保留为安全网（回填后无 NULL，实际不触发）；快照写回对 contextMode 变惰性，无需移除。
+
+### 效果
+
+- 老用户升级后首次进首页：所有旧对话 contextMode 冻结为升级时全局值，此后首页怎么改都不影响它们。
+- 新建对话：创建时快照首页值（现有实现）。
+- 范围仅 contextMode；provider/modelOnline/promptId 仍对 NULL 旧对话跟随全局直到首次发送（用户明确选择保持现状）。
+
 ## 边界情况
 
-- 老用户升级：已有 chats 行 `contextMode` 为 NULL，自动回退全局 `"all"`，行为不变。
+- 老用户升级：已有 chats 行 `contextMode` 为 NULL，首次进首页即被回填冻结，行为不变。
 - `"last"` 模式在对话仅一条消息（首条）时退化为仅当前消息。
 - 快照写回只发生在"解析用到全局回退值"时，与现有逻辑一致。
+- 标志守卫保证回填只执行一次；若进程在回填后被杀、直接恢复到对话页，兜底检查标志后跳过。
