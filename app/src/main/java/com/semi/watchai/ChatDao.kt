@@ -33,6 +33,10 @@ interface ChatDao {
     @Query("DELETE FROM chats WHERE id = :chatId")
     suspend fun deleteChatById(chatId: String)
 
+    // 一次性回填：把 contextMode 为 NULL 的旧对话冻结为当前全局值（幂等）
+    @Query("UPDATE chats SET contextMode = :mode WHERE contextMode IS NULL")
+    suspend fun backfillNullContextMode(mode: String)
+
     // ========== Message 操作 ==========
 
     @Query("SELECT * FROM messages WHERE chatId = :chatId ORDER BY timestamp ASC")

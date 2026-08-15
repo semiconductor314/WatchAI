@@ -24,6 +24,7 @@ class ProviderRepository(private val context: Context) {
         private val KEY_SELECTED = stringPreferencesKey("selected_provider_id")
         private val KEY_MODEL_ONLINE = booleanPreferencesKey("model_online")
         private val KEY_CONTEXT_MODE = stringPreferencesKey("context_mode")
+        private val KEY_CONTEXT_MODE_BACKFILLED = booleanPreferencesKey("context_mode_backfilled")
 
         const val CONTEXT_MODE_ALL = "all"
         const val CONTEXT_MODE_LAST = "last"
@@ -99,5 +100,14 @@ class ProviderRepository(private val context: Context) {
     /** 设置全局"上下文选择"默认值。 */
     suspend fun setContextMode(mode: String) {
         context.providerDataStore.edit { it[KEY_CONTEXT_MODE] = mode }
+    }
+
+    /** 是否已执行过旧对话 contextMode 一次性回填。 */
+    suspend fun isContextModeBackfilled(): Boolean =
+        context.providerDataStore.data.first()[KEY_CONTEXT_MODE_BACKFILLED] ?: false
+
+    /** 标记旧对话 contextMode 一次性回填已完成。 */
+    suspend fun markContextModeBackfilled() {
+        context.providerDataStore.edit { it[KEY_CONTEXT_MODE_BACKFILLED] = true }
     }
 }

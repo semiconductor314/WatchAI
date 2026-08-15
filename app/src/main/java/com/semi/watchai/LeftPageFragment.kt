@@ -74,6 +74,15 @@ class LeftPageFragment : Fragment() {
     // ✅ 从 Room 加载聊天列表
     private fun loadChats() {
         lifecycleScope.launch {
+            // 一次性回填：把升级前已存在的旧对话（contextMode 仍为 NULL）冻结为当前全局值，
+            // 此后首页"上下文选择"改动不再影响它们。首页设置页只能从首页进入，
+            // 因此在任何全局改动之前回填必已完成。DataStore 标志保证只执行一次。
+            val providerRepo = ProviderRepository(requireContext())
+            if (!providerRepo.isContextModeBackfilled()) {
+                chatRepository.backfillNullContextMode(providerRepo.contextMode())
+                providerRepo.markContextModeBackfilled()
+            }
+
             val chats = chatRepository.getAllChatsFlow().collect { chatList ->
                 dataList.clear()
                 dataList.addAll(chatList)

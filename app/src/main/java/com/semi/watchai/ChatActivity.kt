@@ -43,6 +43,16 @@ class ChatActivity : AppCompatActivity() {
         providerRepository = ProviderRepository(this)
         promptRepository = PromptRepository(this)
 
+        // 兜底回填：进程被杀后直接恢复到对话页（未经过首页）时，
+        // 同样把旧对话（contextMode 为 NULL）冻结为当前全局值。
+        // DataStore 标志保证全 app 只执行一次。
+        lifecycleScope.launch {
+            if (!providerRepository.isContextModeBackfilled()) {
+                chatRepository.backfillNullContextMode(providerRepository.contextMode())
+                providerRepository.markContextModeBackfilled()
+            }
+        }
+
         initViews()
         setupRecyclerView()
         loadChat()

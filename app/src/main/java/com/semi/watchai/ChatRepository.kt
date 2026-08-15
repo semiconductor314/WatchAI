@@ -101,6 +101,12 @@ class ChatRepository(private val dao: ChatDao) {
         dao.updateChat(entity)
     }
 
+    // 一次性回填：把 contextMode 为 NULL 的已有对话冻结为当前全局值，
+    // 此后首页全局改动不再影响这些旧对话（由一次性标志保证只执行一次）
+    suspend fun backfillNullContextMode(mode: String) {
+        dao.backfillNullContextMode(mode)
+    }
+
     // 更新每对话的设置（只更新非 null 字段）
     suspend fun updateChatSettings(
         chatId: String,
