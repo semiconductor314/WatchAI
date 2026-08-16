@@ -29,30 +29,25 @@ class ProviderRepository(private val context: Context) {
         const val CONTEXT_MODE_ALL = "all"
         const val CONTEXT_MODE_LAST = "last"
         const val CONTEXT_MODE_NONE = "none"
-
-        // 默认 DeepSeek 供应商（沿用原硬编码 key，保证首次启动即可用）
-        private fun defaultProvider() = AiProvider(
-            name = "DeepSeek",
-            baseUrl = "https://api.deepseek.com",
-            apiKey = "sk-c6d9f96ab3844ffdaf174aba3d7b049b"
-        )
     }
 
-    /** 供应商列表；为空时播种默认 DeepSeek 并写回。 */
+    /** 供应商列表；为空时返回空列表（不再播种任何默认供应商）。 */
     suspend fun providers(): List<AiProvider> {
         val prefs = context.providerDataStore.data.first()
         val json = prefs[KEY_PROVIDERS]
-        if (json.isNullOrBlank()) {
-            val defaults = listOf(defaultProvider())
-            context.providerDataStore.edit { it[KEY_PROVIDERS] = gson.toJson(defaults) }
-            return defaults
-        }
-        return try {
+        if (json.isNullOrBlank()) return emptyList()
+        val list = try {
             val type = object : TypeToken<List<AiProvider>>() {}.type
             gson.fromJson<List<AiProvider>>(json, type) ?: emptyList()
         } catch (e: Exception) {
             emptyList()
         }
+        // 存量清理：旧版硬编码默认 key 置空（幂等），有变化才写回
+        val scrubbed = list.map { it.scrubDefaultApiKey() }
+        if (scrubbed != list) {
+            context.providerDataStore.edit { it[KEY_PROVIDERS] = gson.toJson(scrubbed) }
+        }
+        return scrubbed
     }
 
     /**
@@ -69,6 +64,23 @@ class ProviderRepository(private val context: Context) {
     /** 切换当前选中的供应商。 */
     suspend fun selectProvider(id: String) {
         context.providerDataStore.edit { it[KEY_SELECTED] = id }
+    }
+
+    /** 更新供应商（按 id 覆盖；不存在则忽略）。 */
+    suspend fun updateProvider(provider: AiProvider) {
+        val list = providers().toMutableList()
+        val index = list.indexOfFirst { it.id == provider.id }
+        if (index < 0) return
+        list[index] = provider
+        context.providerDataStore.edit { it[KEY_PROVIDERS] = gson.toJson(list) }
+    }
+
+    /** 删除供应商（按 id；不存在则忽略）。 */
+    suspend fun deleteProvider(id: String) {
+        val list = providers().toMutableList()
+        if (list.removeAll { it.id == id }) {
+            context.providerDataStore.edit { it[KEY_PROVIDERS] = gson.toJson(list) }
+        }
     }
 
     /** 当前选中的供应商；未选或已失效时回退到第一个。 */

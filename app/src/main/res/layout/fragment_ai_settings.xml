@@ -13,6 +13,7 @@
         android:padding="24dp">
 
         <TextView
+            android:id="@+id/tvSettingsTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="AI 设置"
@@ -22,6 +23,7 @@
 
         <!-- 模型联网开关 -->
         <LinearLayout
+            android:id="@+id/llModelOnlineRow"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
@@ -41,93 +43,134 @@
                 android:layout_height="wrap_content" />
         </LinearLayout>
 
-        <!-- 提示词区：点击选择器弹出列表，列表项右侧带 ":" -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="系统提示词"
-            android:textColor="#888888"
-            android:textSize="12sp"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="8dp" />
-
+        <!-- 系统提示词区：点击选择器弹出列表，列表项右侧带 ":" -->
         <LinearLayout
-            android:id="@+id/llPromptSelector"
+            android:id="@+id/llPromptSection"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:background="@drawable/edittext_background">
-
-            <TextView
-                android:id="@+id/tvSelectedPrompt"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:paddingStart="12dp"
-                android:textColor="#FFFFFF"
-                android:textSize="15sp" />
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:paddingEnd="12dp"
-                android:text="▾"
+                android:text="系统提示词"
                 android:textColor="#888888"
-                android:textSize="15sp" />
+                android:textSize="12sp"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="8dp" />
+
+            <LinearLayout
+                android:id="@+id/llPromptSelector"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/edittext_background">
+
+                <TextView
+                    android:id="@+id/tvSelectedPrompt"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:paddingStart="12dp"
+                    android:textColor="#FFFFFF"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingEnd="12dp"
+                    android:text="▾"
+                    android:textColor="#888888"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btnAddPrompt"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="12dp"
+                android:text="新建提示词"
+                android:textColor="#FFFFFF"
+                android:textSize="15sp"
+                android:background="@drawable/create_project_button" />
         </LinearLayout>
 
-        <Button
-            android:id="@+id/btnAddPrompt"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginTop="12dp"
-            android:text="新建提示词"
-            android:textColor="#FFFFFF"
-            android:textSize="15sp"
-            android:background="@drawable/create_project_button" />
-
         <!-- 上下文选择：下拉框 -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="上下文选择"
-            android:textColor="#888888"
-            android:textSize="12sp"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="8dp" />
-
-        <Spinner
-            android:id="@+id/spinnerContextMode"
+        <LinearLayout
+            android:id="@+id/llContextModeSection"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:popupBackground="#10141D" />
+            android:orientation="vertical">
 
-        <!-- 供应商区 -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="选择用于 AI 对话的接口"
-            android:textColor="#888888"
-            android:textSize="12sp"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="8dp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="上下文选择"
+                android:textColor="#888888"
+                android:textSize="12sp"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="8dp" />
 
-        <Spinner
-            android:id="@+id/spinnerProvider"
+            <Spinner
+                android:id="@+id/spinnerContextMode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:popupBackground="#10141D" />
+        </LinearLayout>
+
+        <!-- 供应商区：点击选择器弹出列表，列表项右侧带 ":"（仅首页可管理，正在使用的供应商无 ":"） -->
+        <LinearLayout
+            android:id="@+id/llProviderSection"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:popupBackground="#10141D" />
+            android:orientation="vertical">
 
-        <Button
-            android:id="@+id/btnAddProvider"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginTop="12dp"
-            android:text="新建供应商"
-            android:textColor="#FFFFFF"
-            android:textSize="15sp"
-            android:background="@drawable/create_project_button" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="选择用于 AI 对话的接口"
+                android:textColor="#888888"
+                android:textSize="12sp"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="8dp" />
+
+            <LinearLayout
+                android:id="@+id/llProviderSelector"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/edittext_background">
+
+                <TextView
+                    android:id="@+id/tvSelectedProvider"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:paddingStart="12dp"
+                    android:textColor="#FFFFFF"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingEnd="12dp"
+                    android:text="▾"
+                    android:textColor="#888888"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btnAddProvider"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="12dp"
+                android:text="新建供应商"
+                android:textColor="#FFFFFF"
+                android:textSize="15sp"
+                android:background="@drawable/create_project_button" />
+        </LinearLayout>
 
     </LinearLayout>
 </ScrollView>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "其他 >" 中转页入口按钮：与首页入口卡片一致的深灰蓝底 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#252932" />
+    <corners android:radius="12dp" />
+</shape>

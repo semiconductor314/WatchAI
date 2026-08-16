@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.EditText
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -99,10 +100,21 @@ class LeftPageFragment : Fragment() {
     // ✅ 创建新聊天
     private fun createNewChat() {
         lifecycleScope.launch {
-            // 首页设置只作为新建对话的默认值：创建时把当前全局设置快照进新对话
             val providerRepo = ProviderRepository(requireContext())
+            val provider = providerRepo.selectedProvider()
+            // 没有可用供应商（无供应商或未填 api_key）时，先弹窗要求填写供应商
+            if (provider == null || !provider.hasConfiguredApiKey()) {
+                showProviderSetupDialog(providerRepo)
+                return@launch
+            }
+            doCreateChat(providerRepo, provider.id)
+        }
+    }
+
+    private fun doCreateChat(providerRepo: ProviderRepository, providerId: String) {
+        lifecycleScope.launch {
+            // 首页设置只作为新建对话的默认值：创建时把当前全局设置快照进新对话
             val promptRepo = PromptRepository(requireContext())
-            val providerId = providerRepo.selectedProvider()?.id
             val modelOnline = providerRepo.modelOnline()
             val promptId = promptRepo.selectedPromptId()
             val contextMode = providerRepo.contextMode()
@@ -115,6 +127,60 @@ class LeftPageFragment : Fragment() {
             val intent = Intent(requireContext(), ChatActivity::class.java)
             intent.putExtra("chat_id", newChat.id)
             startActivity(intent)
+        }
+    }
+
+    /** 未配置供应商时弹出的填写表单：保存后全局选中该供应商并继续创建对话。 */
+    private fun showProviderSetupDialog(providerRepo: ProviderRepository) {
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_provider, null)
+        val etName = dialogView.findViewById<EditText>(R.id.etProviderName)
+        val etUrl = dialogView.findViewById<EditText>(R.id.etProviderUrl)
+        val etKey = dialogView.findViewById<EditText>(R.id.etProviderKey)
+
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setView(dialogView)
+            .setCancelable(true)
+            .create()
+
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        dialogView.findViewById<Button>(R.id.btnCancel).setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialogView.findViewById<Button>(R.id.btnConfirm).setOnClickListener {
+            val name = etName.text.toString().trim()
+            val url = etUrl.text.toString().trim()
+            val key = etKey.text.toString().trim()
+            if (name.isEmpty() || url.isEmpty() || key.isEmpty()) {
+                Toast.makeText(requireContext(), "名称、链接、Key 都不能为空", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            dialog.dismiss()
+            lifecycleScope.launch {
+                val newProvider = AiProvider(name = name, baseUrl = url, apiKey = key)
+                providerRepo.addProvider(newProvider)
+                providerRepo.selectProvider(newProvider.id)
+                Toast.makeText(requireContext(), "已添加供应商：${newProvider.name}", Toast.LENGTH_SHORT).show()
+                doCreateChat(providerRepo, newProvider.id)
+            }
+        }
+
+        dialog.show()
+        clampDialogHeight(dialog, dialogView)
+    }
+
+    /** 小屏/圆表盘上 AlertDialog 内容超高时，限制窗口高度保证底部按钮可达。 */
+    private fun clampDialogHeight(dialog: androidx.appcompat.app.AlertDialog, contentView: View) {
+        val win = dialog.window ?: return
+        val dm = android.content.res.Resources.getSystem().displayMetrics
+        val maxHeight = (dm.heightPixels * 0.85f).toInt()
+        contentView.measure(
+            View.MeasureSpec.makeMeasureSpec(dm.widthPixels, View.MeasureSpec.AT_MOST),
+            View.MeasureSpec.makeMeasureSpec(maxHeight, View.MeasureSpec.AT_MOST)
+        )
+        if (contentView.measuredHeight > maxHeight) {
+            win.setLayout(android.view.WindowManager.LayoutParams.MATCH_PARENT, maxHeight)
         }
     }
 

@@ -52,7 +52,8 @@ class AiSettingsFragment : Fragment() {
 
     private lateinit var providerRepository: ProviderRepository
     private lateinit var promptRepository: PromptRepository
-    private lateinit var spinnerProvider: Spinner
+    private lateinit var llProviderSelector: LinearLayout
+    private lateinit var tvSelectedProvider: TextView
     private lateinit var llPromptSelector: LinearLayout
     private lateinit var tvSelectedPrompt: TextView
     private lateinit var switchModelOnline: Switch
@@ -66,6 +67,11 @@ class AiSettingsFragment : Fragment() {
     private var initialModelOnline = false
     private var initialPromptId: String? = null
     private var allowManagement = true
+    private var title = "AI 设置"
+    private var showModelOnline = true
+    private var showContextMode = true
+    private var showPrompt = true
+    private var showProvider = true
 
     // 上下文选择选项（显示名 -> 存储值），顺序即下拉顺序
     private val contextModeOptions = listOf(
@@ -85,7 +91,8 @@ class AiSettingsFragment : Fragment() {
 
         providerRepository = ProviderRepository(requireContext())
         promptRepository = PromptRepository(requireContext())
-        spinnerProvider = view.findViewById(R.id.spinnerProvider)
+        llProviderSelector = view.findViewById(R.id.llProviderSelector)
+        tvSelectedProvider = view.findViewById(R.id.tvSelectedProvider)
         llPromptSelector = view.findViewById(R.id.llPromptSelector)
         tvSelectedPrompt = view.findViewById(R.id.tvSelectedPrompt)
         switchModelOnline = view.findViewById(R.id.switchModelOnline)
@@ -97,7 +104,23 @@ class AiSettingsFragment : Fragment() {
             initialPromptId = it.getString(ARG_PROMPT_ID)
             allowManagement = it.getBoolean(ARG_ALLOW_MANAGEMENT, true)
             initialContextMode = it.getString(ARG_CONTEXT_MODE) ?: ProviderRepository.CONTEXT_MODE_ALL
+            title = it.getString(ARG_TITLE) ?: "AI 设置"
+            showModelOnline = it.getBoolean(ARG_SHOW_MODEL_ONLINE, true)
+            showContextMode = it.getBoolean(ARG_SHOW_CONTEXT_MODE, true)
+            showPrompt = it.getBoolean(ARG_SHOW_PROMPT, true)
+            showProvider = it.getBoolean(ARG_SHOW_PROVIDER, true)
         }
+
+        // 按页面参数显隐区块 + 设置标题
+        view.findViewById<TextView>(R.id.tvSettingsTitle).text = title
+        view.findViewById<View>(R.id.llModelOnlineRow).visibility =
+            if (showModelOnline) View.VISIBLE else View.GONE
+        view.findViewById<View>(R.id.llContextModeSection).visibility =
+            if (showContextMode) View.VISIBLE else View.GONE
+        view.findViewById<View>(R.id.llPromptSection).visibility =
+            if (showPrompt) View.VISIBLE else View.GONE
+        view.findViewById<View>(R.id.llProviderSection).visibility =
+            if (showProvider) View.VISIBLE else View.GONE
 
         // 对话设置页不显示管理按钮（新建提示词 / 新建供应商）
         if (!allowManagement) {
@@ -112,7 +135,7 @@ class AiSettingsFragment : Fragment() {
         }
 
         view.findViewById<Button>(R.id.btnAddProvider).setOnClickListener {
-            showAddProviderDialog()
+            showProviderDialog(edit = null)
         }
 
         view.findViewById<Button>(R.id.btnAddPrompt).setOnClickListener {
@@ -143,22 +166,10 @@ class AiSettingsFragment : Fragment() {
             showPromptSelectorPopup()
         }
 
-        spinnerProvider.onItemSelectedListener =
-            object : android.widget.AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(
-                    parent: android.widget.AdapterView<*>?,
-                    view: android.view.View?,
-                    position: Int,
-                    id: Long
-                ) {
-                    if (restoringSelection) return
-                    if (position in providers.indices) {
-                        listener?.onProviderSelected(providers[position].id)
-                    }
-                }
-
-                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
-            }
+        // 点击选择器 = 弹出供应商列表（首页可管理：列表项右侧带 ":"）
+        llProviderSelector.setOnClickListener {
+            showProviderSelectorPopup()
+        }
 
         spinnerContextMode.onItemSelectedListener =
             object : android.widget.AdapterView.OnItemSelectedListener {
@@ -206,26 +217,15 @@ class AiSettingsFragment : Fragment() {
         lifecycleScope.launch {
             providers.clear()
             providers.addAll(providerRepository.providers())
-            refreshProviderSpinner()
+            refreshProviderDisplay()
         }
     }
 
-    private fun refreshProviderSpinner() {
-        val adapter = ArrayAdapter(
-            requireContext(),
-            R.layout.spinner_item,
-            providers.map { it.name }
-        )
-        adapter.setDropDownViewResource(R.layout.spinner_item)
-
-        // 恢复选中时不触发保存逻辑（onItemSelected 同步回调）
-        restoringSelection = true
-        spinnerProvider.adapter = adapter
-        val index = providers.indexOfFirst { it.id == initialProviderId }
-        if (index >= 0) {
-            spinnerProvider.setSelection(index)
-        }
-        restoringSelection = false
+    private fun refreshProviderDisplay() {
+        val target = initialProviderId
+        tvSelectedProvider.text = providers.firstOrNull { it.id == target }?.name
+            ?: providers.firstOrNull()?.name
+            ?: "未配置"
     }
 
     private fun refreshContextModeSpinner() {
@@ -246,11 +246,95 @@ class AiSettingsFragment : Fragment() {
         restoringSelection = false
     }
 
-    private fun showAddProviderDialog() {
+    private var providerListPopup: PopupWindow? = null
+
+    /** 点击选择器：弹出供应商列表（仿首页历史记录/提示词列表，列表项右侧带 ":"）。 */
+    private fun showProviderSelectorPopup() {
+        if (providers.isEmpty()) return
+
+        val screenWidth = Resources.getSystem().displayMetrics.widthPixels
+        val screenHeight = Resources.getSystem().displayMetrics.heightPixels
+        val density = Resources.getSystem().displayMetrics.density
+        // 宽 75% 以内，避免圆表盘边缘裁掉右侧 ":" 按钮
+        val popupWidth = (screenWidth * 0.75f).toInt()
+        // 行高按 dp 计算（48dp），避免像素换算后在低密度屏上过矮
+        val rowHeight = (48 * density).toInt().coerceAtLeast(56)
+        val maxRows = 4
+        val popupHeight = (rowHeight * providers.size.coerceAtMost(maxRows) + 8)
+            .coerceAtMost((screenHeight * 0.7f).toInt())
+
+        val popupView = LayoutInflater.from(requireContext()).inflate(R.layout.popup_provider_list, null)
+        val container = popupView.findViewById<LinearLayout>(R.id.providerListContainer)
+
+        providers.forEach { provider ->
+            val row = LayoutInflater.from(requireContext())
+                .inflate(R.layout.item_provider_selector, container, false)
+            val tvName = row.findViewById<TextView>(R.id.tvProviderSelectorName)
+            val btnAction = row.findViewById<Button>(R.id.btnProviderSelectorAction)
+
+            tvName.text = provider.name
+            tvName.layoutParams = LinearLayout.LayoutParams(0, rowHeight, 1f)
+            btnAction.layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, rowHeight
+            )
+
+            // 点击条目 = 选中该供应商
+            row.setOnClickListener {
+                providerListPopup?.dismiss()
+                providerListPopup = null
+                selectProvider(provider)
+            }
+
+            // 正在使用的供应商不可编辑/删除；对话设置页不提供管理：都不显示 ":"
+            val isInUse = provider.id == initialProviderId
+            if (!allowManagement || isInUse) {
+                btnAction.visibility = View.INVISIBLE
+            } else {
+                btnAction.setOnClickListener {
+                    // 先捕获位置再解散列表，否则锚点已脱离屏幕（读到 (0,0)，弹窗跑到左上角）
+                    val loc = IntArray(2)
+                    btnAction.getLocationOnScreen(loc)
+                    providerListPopup?.dismiss()
+                    providerListPopup = null
+                    showProviderActions(provider, loc)
+                }
+            }
+            container.addView(row)
+        }
+
+        val popup = PopupWindow(popupView, popupWidth, popupHeight, true)
+        popup.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        popup.animationStyle = android.R.style.Animation_Dialog
+        popup.setOutsideTouchable(true)
+        popupView.setOnTouchListener { _, _ ->
+            popup.dismiss()
+            providerListPopup = null
+            false
+        }
+        providerListPopup = popup
+        popup.showAtLocation(llProviderSelector, Gravity.CENTER, 0, 0)
+    }
+
+    private fun selectProvider(provider: AiProvider) {
+        initialProviderId = provider.id
+        refreshProviderDisplay()
+        listener?.onProviderSelected(provider.id)
+    }
+
+    /** 新建/编辑供应商弹窗（编辑时预填字段，标题切换为"编辑供应商"）。 */
+    private fun showProviderDialog(edit: AiProvider?) {
         val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_provider, null)
+        val tvTitle = dialogView.findViewById<TextView>(R.id.tvProviderDialogTitle)
         val etName = dialogView.findViewById<EditText>(R.id.etProviderName)
         val etUrl = dialogView.findViewById<EditText>(R.id.etProviderUrl)
         val etKey = dialogView.findViewById<EditText>(R.id.etProviderKey)
+
+        if (edit != null) {
+            tvTitle.text = "编辑供应商"
+            etName.setText(edit.name)
+            etUrl.setText(edit.baseUrl)
+            etKey.setText(edit.apiKey)
+        }
 
         val dialog = androidx.appcompat.app.AlertDialog.Builder(requireContext())
             .setView(dialogView)
@@ -272,7 +356,11 @@ class AiSettingsFragment : Fragment() {
                 return@setOnClickListener
             }
             dialog.dismiss()
-            addProvider(AiProvider(name = name, baseUrl = url, apiKey = key))
+            if (edit != null) {
+                updateProvider(edit.copy(name = name, baseUrl = url, apiKey = key))
+            } else {
+                addProvider(AiProvider(name = name, baseUrl = url, apiKey = key))
+            }
         }
 
         dialog.show()
@@ -287,6 +375,34 @@ class AiSettingsFragment : Fragment() {
             // 让宿主同步持久化（对话设置页 = 该对话用新供应商）
             listener?.onProviderSelected(provider.id)
             Toast.makeText(requireContext(), "已添加供应商：${provider.name}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun updateProvider(provider: AiProvider) {
+        lifecycleScope.launch {
+            providerRepository.updateProvider(provider)
+            initialProviderId = provider.id
+            loadProviders()
+            // 编辑后选中该供应商（与提示词编辑行为一致），让宿主同步持久化
+            listener?.onProviderSelected(provider.id)
+            Toast.makeText(requireContext(), "已更新供应商：${provider.name}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun deleteProvider(provider: AiProvider) {
+        lifecycleScope.launch {
+            providerRepository.deleteProvider(provider.id)
+            // 正在使用的供应商不允许删除（":" 不可见），理论上到不了这里；
+            // 兜底：若选中项意外失效则回退到第一个
+            if (initialProviderId == provider.id) {
+                val fallback = providerRepository.providers().firstOrNull()
+                initialProviderId = fallback?.id
+                if (fallback != null) {
+                    listener?.onProviderSelected(fallback.id)
+                }
+            }
+            loadProviders()
+            Toast.makeText(requireContext(), "已删除供应商：${provider.name}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -381,8 +497,39 @@ class AiSettingsFragment : Fragment() {
         listener?.onPromptSelected(prompt.id)
     }
 
-    /** ":" 弹窗：编辑 / 删除（位置逻辑仿首页历史记录，锚点坐标须在列表解散前捕获）。 */
+    /** 提示词 ":" 弹窗：编辑 / 删除。 */
     private fun showPromptActions(prompt: Prompt, anchorLocation: IntArray) {
+        showActionsPopup(
+            anchorView = llPromptSelector,
+            anchorLocation = anchorLocation,
+            option1Text = "编辑",
+            option2Text = "删除",
+            onOption1 = { showPromptDialog(edit = prompt) },
+            onOption2 = { deletePrompt(prompt) }
+        )
+    }
+
+    /** 供应商 ":" 弹窗：编辑 / 删除。 */
+    private fun showProviderActions(provider: AiProvider, anchorLocation: IntArray) {
+        showActionsPopup(
+            anchorView = llProviderSelector,
+            anchorLocation = anchorLocation,
+            option1Text = "编辑",
+            option2Text = "删除",
+            onOption1 = { showProviderDialog(edit = provider) },
+            onOption2 = { deleteProvider(provider) }
+        )
+    }
+
+    /** ":" 弹窗：编辑 / 删除（位置逻辑仿首页历史记录，锚点坐标须在列表解散前捕获）。提示词与供应商共用。 */
+    private fun showActionsPopup(
+        anchorView: View,
+        anchorLocation: IntArray,
+        option1Text: String,
+        option2Text: String,
+        onOption1: () -> Unit,
+        onOption2: () -> Unit
+    ) {
         val screenWidth = Resources.getSystem().displayMetrics.widthPixels
         val screenHeight = Resources.getSystem().displayMetrics.heightPixels
         val popupWidth = (screenWidth * 0.30f).toInt()
@@ -393,8 +540,8 @@ class AiSettingsFragment : Fragment() {
 
         val btnOption1 = popupView.findViewById<Button>(R.id.btnOption1)
         val btnOption2 = popupView.findViewById<Button>(R.id.btnOption2)
-        btnOption1.text = "编辑"
-        btnOption2.text = "删除"
+        btnOption1.text = option1Text
+        btnOption2.text = option2Text
 
         val btnHeight = (popupHeight * 0.42f).toInt()
         val btnWidth = (popupWidth * 0.85f).toInt()
@@ -419,15 +566,15 @@ class AiSettingsFragment : Fragment() {
         if (y + popupHeight > screenHeight) y = anchorLocation[1] - popupHeight
         if (x < 0) x = 10
         if (x + popupWidth > screenWidth) x = screenWidth - popupWidth - 10
-        actionsPopup.showAtLocation(llPromptSelector, Gravity.NO_GRAVITY, x, y)
+        actionsPopup.showAtLocation(anchorView, Gravity.NO_GRAVITY, x, y)
 
         btnOption1.setOnClickListener {
             actionsPopup.dismiss()
-            showPromptDialog(edit = prompt)
+            onOption1()
         }
         btnOption2.setOnClickListener {
             actionsPopup.dismiss()
-            deletePrompt(prompt)
+            onOption2()
         }
         popupView.setOnTouchListener { _, _ ->
             actionsPopup.dismiss()
@@ -516,13 +663,23 @@ class AiSettingsFragment : Fragment() {
         private const val ARG_PROMPT_ID = "arg_prompt_id"
         private const val ARG_ALLOW_MANAGEMENT = "arg_allow_management"
         private const val ARG_CONTEXT_MODE = "arg_context_mode"
+        private const val ARG_TITLE = "arg_title"
+        private const val ARG_SHOW_MODEL_ONLINE = "arg_show_model_online"
+        private const val ARG_SHOW_CONTEXT_MODE = "arg_show_context_mode"
+        private const val ARG_SHOW_PROMPT = "arg_show_prompt"
+        private const val ARG_SHOW_PROVIDER = "arg_show_provider"
 
         fun newInstance(
             providerId: String?,
             modelOnline: Boolean,
             promptId: String?,
             allowManagement: Boolean,
-            contextMode: String = ProviderRepository.CONTEXT_MODE_ALL
+            contextMode: String = ProviderRepository.CONTEXT_MODE_ALL,
+            title: String = "AI 设置",
+            showModelOnline: Boolean = true,
+            showContextMode: Boolean = true,
+            showPrompt: Boolean = true,
+            showProvider: Boolean = true
         ): AiSettingsFragment {
             return AiSettingsFragment().apply {
                 arguments = Bundle().apply {
@@ -531,6 +688,11 @@ class AiSettingsFragment : Fragment() {
                     putString(ARG_PROMPT_ID, promptId)
                     putBoolean(ARG_ALLOW_MANAGEMENT, allowManagement)
                     putString(ARG_CONTEXT_MODE, contextMode)
+                    putString(ARG_TITLE, title)
+                    putBoolean(ARG_SHOW_MODEL_ONLINE, showModelOnline)
+                    putBoolean(ARG_SHOW_CONTEXT_MODE, showContextMode)
+                    putBoolean(ARG_SHOW_PROMPT, showPrompt)
+                    putBoolean(ARG_SHOW_PROVIDER, showProvider)
                 }
             }
         }

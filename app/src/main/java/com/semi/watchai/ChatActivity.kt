@@ -189,6 +189,11 @@ class ChatActivity : AppCompatActivity() {
                     Toast.makeText(this@ChatActivity, "请先在设置中添加 AI 供应商", Toast.LENGTH_LONG).show()
                     return@launch
                 }
+                if (!provider.hasConfiguredApiKey()) {
+                    adapter.removeMessage(placeholder.id)
+                    Toast.makeText(this@ChatActivity, "请先填写 API Key", Toast.LENGTH_LONG).show()
+                    return@launch
+                }
                 val modelOnline = fresh?.modelOnline ?: providerRepository.modelOnline()
                 // 提示词：该对话已存 ?? 全局选中；"默认"恒可解析，无 null 分支
                 val promptId = fresh?.promptId ?: promptRepository.selectedPromptId()

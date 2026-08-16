@@ -18,9 +18,9 @@ class MainActivity : AppCompatActivity() {
                 .commit()
         }
 
-        // 设置按钮：跳转到设置页
+        // 其他按钮：跳转到设置中转页
         findViewById<Button>(R.id.btnSettings).setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
+            startActivity(Intent(this, OthersActivity::class.java))
         }
     }
 }

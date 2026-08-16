@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#10141D">
+
+    <!-- 返回按钮 -->
+    <Button
+        android:id="@+id/others_back"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:text="返回"
+        android:textSize="14sp"
+        android:textColor="#FFFFFF"
+        android:background="@android:color/transparent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHeight_percent="0.15"
+        app:layout_constraintWidth_percent="0.15"
+        app:layout_constraintVertical_bias="0" />
+
+    <!-- 四个入口按钮：默认设置 / 模型库 / 系统提示词 / 关于（可滚动，保证小屏可见可点） -->
+    <ScrollView
+        android:id="@+id/scrollOthers"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/others_back"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingHorizontal="24dp"
+            android:paddingBottom="16dp">
+
+            <Button
+                android:id="@+id/btnDefaultSettings"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="16dp"
+                android:text="默认设置"
+                android:textColor="#FFFFFF"
+                android:textSize="15sp"
+                android:background="@drawable/others_button_background" />
+
+            <Button
+                android:id="@+id/btnModelLibrary"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="12dp"
+                android:text="模型库"
+                android:textColor="#FFFFFF"
+                android:textSize="15sp"
+                android:background="@drawable/others_button_background" />
+
+            <Button
+                android:id="@+id/btnPromptSettings"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="12dp"
+                android:text="系统提示词"
+                android:textColor="#FFFFFF"
+                android:textSize="15sp"
+                android:background="@drawable/others_button_background" />
+
+            <Button
+                android:id="@+id/btnAbout"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="12dp"
+                android:text="关于"
+                android:textColor="#FFFFFF"
+                android:textSize="15sp"
+                android:background="@drawable/others_button_background" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
