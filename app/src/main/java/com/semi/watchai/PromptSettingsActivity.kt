@@ -41,6 +41,7 @@ class PromptSettingsActivity : AppCompatActivity(), AiSettingsFragment.Listener 
                             contextMode = contextMode,
                             title = "系统提示词",
                             showModelOnline = false,
+                            showStreamEnabled = false,
                             showContextMode = false,
                             showPrompt = true,
                             showProvider = false

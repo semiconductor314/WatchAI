@@ -25,6 +25,7 @@ class ProviderRepository(private val context: Context) {
         private val KEY_MODEL_ONLINE = booleanPreferencesKey("model_online")
         private val KEY_CONTEXT_MODE = stringPreferencesKey("context_mode")
         private val KEY_CONTEXT_MODE_BACKFILLED = booleanPreferencesKey("context_mode_backfilled")
+        private val KEY_STREAM_ENABLED = booleanPreferencesKey("stream_enabled")
 
         const val CONTEXT_MODE_ALL = "all"
         const val CONTEXT_MODE_LAST = "last"
@@ -121,5 +122,14 @@ class ProviderRepository(private val context: Context) {
     /** 标记旧对话 contextMode 一次性回填已完成。 */
     suspend fun markContextModeBackfilled() {
         context.providerDataStore.edit { it[KEY_CONTEXT_MODE_BACKFILLED] = true }
+    }
+
+    /** 全局"流式输出"默认值（每对话可单独覆盖），默认开启。 */
+    suspend fun streamEnabled(): Boolean =
+        context.providerDataStore.data.first()[KEY_STREAM_ENABLED] ?: true
+
+    /** 设置全局"流式输出"默认值。 */
+    suspend fun setStreamEnabled(enabled: Boolean) {
+        context.providerDataStore.edit { it[KEY_STREAM_ENABLED] = enabled }
     }
 }

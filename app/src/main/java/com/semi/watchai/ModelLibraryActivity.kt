@@ -40,6 +40,7 @@ class ModelLibraryActivity : AppCompatActivity(), AiSettingsFragment.Listener {
                             contextMode = contextMode,
                             title = "模型库",
                             showModelOnline = false,
+                            showStreamEnabled = false,
                             showContextMode = false,
                             showPrompt = false,
                             showProvider = true

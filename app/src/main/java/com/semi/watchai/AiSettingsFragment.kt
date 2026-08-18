@@ -39,6 +39,7 @@ class AiSettingsFragment : Fragment() {
         fun onProviderSelected(providerId: String)
         fun onPromptSelected(promptId: String)
         fun onModelOnlineChanged(enabled: Boolean)
+        fun onStreamEnabledChanged(enabled: Boolean) {}
         fun onContextModeSelected(mode: String) {}
     }
 
@@ -57,6 +58,7 @@ class AiSettingsFragment : Fragment() {
     private lateinit var llPromptSelector: LinearLayout
     private lateinit var tvSelectedPrompt: TextView
     private lateinit var switchModelOnline: Switch
+    private lateinit var switchStreamEnabled: Switch
     private lateinit var spinnerContextMode: Spinner
 
     private val providers = mutableListOf<AiProvider>()
@@ -69,6 +71,7 @@ class AiSettingsFragment : Fragment() {
     private var allowManagement = true
     private var title = "AI 设置"
     private var showModelOnline = true
+    private var showStreamEnabled = true
     private var showContextMode = true
     private var showPrompt = true
     private var showProvider = true
@@ -81,6 +84,8 @@ class AiSettingsFragment : Fragment() {
     )
 
     private var initialContextMode = ProviderRepository.CONTEXT_MODE_ALL
+
+    private var initialStreamEnabled = true
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -96,6 +101,7 @@ class AiSettingsFragment : Fragment() {
         llPromptSelector = view.findViewById(R.id.llPromptSelector)
         tvSelectedPrompt = view.findViewById(R.id.tvSelectedPrompt)
         switchModelOnline = view.findViewById(R.id.switchModelOnline)
+        switchStreamEnabled = view.findViewById(R.id.switchStreamEnabled)
         spinnerContextMode = view.findViewById(R.id.spinnerContextMode)
 
         arguments?.let {
@@ -104,8 +110,10 @@ class AiSettingsFragment : Fragment() {
             initialPromptId = it.getString(ARG_PROMPT_ID)
             allowManagement = it.getBoolean(ARG_ALLOW_MANAGEMENT, true)
             initialContextMode = it.getString(ARG_CONTEXT_MODE) ?: ProviderRepository.CONTEXT_MODE_ALL
+            initialStreamEnabled = it.getBoolean(ARG_STREAM_ENABLED, true)
             title = it.getString(ARG_TITLE) ?: "AI 设置"
             showModelOnline = it.getBoolean(ARG_SHOW_MODEL_ONLINE, true)
+            showStreamEnabled = it.getBoolean(ARG_SHOW_STREAM_ENABLED, true)
             showContextMode = it.getBoolean(ARG_SHOW_CONTEXT_MODE, true)
             showPrompt = it.getBoolean(ARG_SHOW_PROMPT, true)
             showProvider = it.getBoolean(ARG_SHOW_PROVIDER, true)
@@ -113,8 +121,9 @@ class AiSettingsFragment : Fragment() {
 
         // 按页面参数显隐区块 + 设置标题
         view.findViewById<TextView>(R.id.tvSettingsTitle).text = title
-        view.findViewById<View>(R.id.llModelOnlineRow).visibility =
-            if (showModelOnline) View.VISIBLE else View.GONE
+        refreshModelOnlineRowVisibility(view)
+        view.findViewById<View>(R.id.llStreamEnabledRow).visibility =
+            if (showStreamEnabled) View.VISIBLE else View.GONE
         view.findViewById<View>(R.id.llContextModeSection).visibility =
             if (showContextMode) View.VISIBLE else View.GONE
         view.findViewById<View>(R.id.llPromptSection).visibility =
@@ -132,6 +141,11 @@ class AiSettingsFragment : Fragment() {
         switchModelOnline.isChecked = initialModelOnline
         switchModelOnline.setOnCheckedChangeListener { _, checked ->
             listener?.onModelOnlineChanged(checked)
+        }
+
+        switchStreamEnabled.isChecked = initialStreamEnabled
+        switchStreamEnabled.setOnCheckedChangeListener { _, checked ->
+            listener?.onStreamEnabledChanged(checked)
         }
 
         view.findViewById<Button>(R.id.btnAddProvider).setOnClickListener {
@@ -218,6 +232,7 @@ class AiSettingsFragment : Fragment() {
             providers.clear()
             providers.addAll(providerRepository.providers())
             refreshProviderDisplay()
+            view?.let { refreshModelOnlineRowVisibility(it) }
         }
     }
 
@@ -247,6 +262,26 @@ class AiSettingsFragment : Fragment() {
     }
 
     private var providerListPopup: PopupWindow? = null
+
+    /**
+     * "模型联网"开关仅在当前供应商的模型支持联网搜索（目前仅 DeepSeek）时显示；
+     * 供应商切换时联动刷新。
+     */
+    private fun refreshModelOnlineRowVisibility(root: View) {
+        val provider = providers.firstOrNull { it.id == initialProviderId } ?: providers.firstOrNull()
+        root.findViewById<View>(R.id.llModelOnlineRow).visibility =
+            if (showModelOnline && provider?.supportsWebSearch() == true) View.VISIBLE else View.GONE
+    }
+
+    /** 选择模型预设应用到弹窗：预设模型自动填链接并置灰只读；自定义恢复可编辑（保留已填内容）。 */
+    private fun applyProviderModelPreset(etUrl: EditText, info: AiModels.AiModelInfo, fillUrl: Boolean) {
+        if (fillUrl && info.presetBaseUrl != null) {
+            etUrl.setText(info.presetBaseUrl)
+        }
+        val preset = info.presetBaseUrl != null
+        etUrl.isEnabled = !preset
+        etUrl.alpha = if (preset) 0.5f else 1f
+    }
 
     /** 点击选择器：弹出供应商列表（仿首页历史记录/提示词列表，列表项右侧带 ":"）。 */
     private fun showProviderSelectorPopup() {
@@ -318,6 +353,7 @@ class AiSettingsFragment : Fragment() {
     private fun selectProvider(provider: AiProvider) {
         initialProviderId = provider.id
         refreshProviderDisplay()
+        view?.let { refreshModelOnlineRowVisibility(it) }
         listener?.onProviderSelected(provider.id)
     }
 
@@ -328,6 +364,7 @@ class AiSettingsFragment : Fragment() {
         val etName = dialogView.findViewById<EditText>(R.id.etProviderName)
         val etUrl = dialogView.findViewById<EditText>(R.id.etProviderUrl)
         val etKey = dialogView.findViewById<EditText>(R.id.etProviderKey)
+        val spinnerModel = dialogView.findViewById<Spinner>(R.id.spinnerProviderModel)
 
         if (edit != null) {
             tvTitle.text = "编辑供应商"
@@ -335,6 +372,42 @@ class AiSettingsFragment : Fragment() {
             etUrl.setText(edit.baseUrl)
             etKey.setText(edit.apiKey)
         }
+
+        // 选择模型下拉：预设模型（DeepSeek）自动填链接并置灰只读，自定义恢复手填
+        var selectedModel = edit?.model ?: AiModels.CUSTOM
+        val modelAdapter = ArrayAdapter(
+            requireContext(),
+            R.layout.spinner_item,
+            AiModels.ALL.map { it.displayName }
+        )
+        modelAdapter.setDropDownViewResource(R.layout.spinner_item)
+        spinnerModel.adapter = modelAdapter
+
+        // 初始化选中项时抑制误触发自动填链接（编辑已有供应商时保留其 URL）
+        var restoringSelection = true
+        val modelIndex = AiModels.ALL.indexOfFirst { it.id == selectedModel }.coerceAtLeast(0)
+        spinnerModel.setSelection(modelIndex)
+        restoringSelection = false
+        // 打开即按模型应用只读状态（不覆盖已存 URL）
+        applyProviderModelPreset(etUrl, AiModels.byId(selectedModel), fillUrl = false)
+
+        spinnerModel.onItemSelectedListener =
+            object : android.widget.AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(
+                    parent: android.widget.AdapterView<*>?,
+                    view: android.view.View?,
+                    position: Int,
+                    id: Long
+                ) {
+                    if (restoringSelection) return
+                    if (position in AiModels.ALL.indices) {
+                        selectedModel = AiModels.ALL[position].id
+                        applyProviderModelPreset(etUrl, AiModels.ALL[position], fillUrl = true)
+                    }
+                }
+
+                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+            }
 
         val dialog = androidx.appcompat.app.AlertDialog.Builder(requireContext())
             .setView(dialogView)
@@ -357,9 +430,9 @@ class AiSettingsFragment : Fragment() {
             }
             dialog.dismiss()
             if (edit != null) {
-                updateProvider(edit.copy(name = name, baseUrl = url, apiKey = key))
+                updateProvider(edit.copy(name = name, baseUrl = url, apiKey = key, model = selectedModel))
             } else {
-                addProvider(AiProvider(name = name, baseUrl = url, apiKey = key))
+                addProvider(AiProvider(name = name, baseUrl = url, apiKey = key, model = selectedModel))
             }
         }
 
@@ -663,8 +736,10 @@ class AiSettingsFragment : Fragment() {
         private const val ARG_PROMPT_ID = "arg_prompt_id"
         private const val ARG_ALLOW_MANAGEMENT = "arg_allow_management"
         private const val ARG_CONTEXT_MODE = "arg_context_mode"
+        private const val ARG_STREAM_ENABLED = "arg_stream_enabled"
         private const val ARG_TITLE = "arg_title"
         private const val ARG_SHOW_MODEL_ONLINE = "arg_show_model_online"
+        private const val ARG_SHOW_STREAM_ENABLED = "arg_show_stream_enabled"
         private const val ARG_SHOW_CONTEXT_MODE = "arg_show_context_mode"
         private const val ARG_SHOW_PROMPT = "arg_show_prompt"
         private const val ARG_SHOW_PROVIDER = "arg_show_provider"
@@ -675,8 +750,10 @@ class AiSettingsFragment : Fragment() {
             promptId: String?,
             allowManagement: Boolean,
             contextMode: String = ProviderRepository.CONTEXT_MODE_ALL,
+            streamEnabled: Boolean = true,
             title: String = "AI 设置",
             showModelOnline: Boolean = true,
+            showStreamEnabled: Boolean = true,
             showContextMode: Boolean = true,
             showPrompt: Boolean = true,
             showProvider: Boolean = true
@@ -688,8 +765,10 @@ class AiSettingsFragment : Fragment() {
                     putString(ARG_PROMPT_ID, promptId)
                     putBoolean(ARG_ALLOW_MANAGEMENT, allowManagement)
                     putString(ARG_CONTEXT_MODE, contextMode)
+                    putBoolean(ARG_STREAM_ENABLED, streamEnabled)
                     putString(ARG_TITLE, title)
                     putBoolean(ARG_SHOW_MODEL_ONLINE, showModelOnline)
+                    putBoolean(ARG_SHOW_STREAM_ENABLED, showStreamEnabled)
                     putBoolean(ARG_SHOW_CONTEXT_MODE, showContextMode)
                     putBoolean(ARG_SHOW_PROMPT, showPrompt)
                     putBoolean(ARG_SHOW_PROVIDER, showProvider)

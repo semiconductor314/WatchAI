@@ -49,20 +49,4 @@ class MessageAdapter(
         messages.addAll(newMessages)
         notifyDataSetChanged()
     }
-
-    // 原位更新某条消息内容（用于把"正在思考…"占位替换为真实回复）
-    fun updateMessage(id: String, newContent: String) {
-        val index = messages.indexOfFirst { it.id == id }
-        if (index == -1) return
-        messages[index] = messages[index].copy(content = newContent)
-        notifyItemChanged(index)
-    }
-
-    // 移除某条消息（用于请求失败时移除占位）
-    fun removeMessage(id: String) {
-        val index = messages.indexOfFirst { it.id == id }
-        if (index == -1) return
-        messages.removeAt(index)
-        notifyItemRemoved(index)
-    }
 }

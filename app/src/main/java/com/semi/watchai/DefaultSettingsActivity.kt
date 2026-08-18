@@ -7,7 +7,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 
 /**
- * 默认设置页：模型联网 + 上下文选择（全局默认值，作用于新建对话）。
+ * 默认设置页：模型联网 + 流式输出 + 上下文选择（全局默认值，作用于新建对话）。
  */
 class DefaultSettingsActivity : AppCompatActivity(), AiSettingsFragment.Listener {
 
@@ -29,6 +29,7 @@ class DefaultSettingsActivity : AppCompatActivity(), AiSettingsFragment.Listener
                 val modelOnline = providerRepository.modelOnline()
                 val promptId = PromptRepository(this@DefaultSettingsActivity).selectedPromptId()
                 val contextMode = providerRepository.contextMode()
+                val streamEnabled = providerRepository.streamEnabled()
                 supportFragmentManager.beginTransaction()
                     .replace(
                         R.id.settingsFragmentContainer,
@@ -38,6 +39,7 @@ class DefaultSettingsActivity : AppCompatActivity(), AiSettingsFragment.Listener
                             promptId = promptId,
                             allowManagement = true,
                             contextMode = contextMode,
+                            streamEnabled = streamEnabled,
                             title = "默认设置",
                             showPrompt = false,
                             showProvider = false
@@ -55,6 +57,12 @@ class DefaultSettingsActivity : AppCompatActivity(), AiSettingsFragment.Listener
     override fun onModelOnlineChanged(enabled: Boolean) {
         lifecycleScope.launch {
             providerRepository.setModelOnline(enabled)
+        }
+    }
+
+    override fun onStreamEnabledChanged(enabled: Boolean) {
+        lifecycleScope.launch {
+            providerRepository.setStreamEnabled(enabled)
         }
     }
 

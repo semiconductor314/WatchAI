@@ -8,8 +8,8 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 
 /**
- * 对话设置页：供应商 + 提示词 + 模型联网开关，默认值 = 全局设置，可单独调整，
- * 保存为该对话自己的一份（写回 chats 表对应行的 providerId/promptId/modelOnline）。
+ * 对话设置页：供应商 + 提示词 + 模型联网 + 流式输出开关，默认值 = 全局设置，可单独调整，
+ * 保存为该对话自己的一份（写回 chats 表对应行的 providerId/promptId/modelOnline/streamEnabled）。
  * 不允许管理（新建/编辑提示词、新建供应商只在首页设置页提供）。
  */
 class ChatSettingsActivity : AppCompatActivity(), AiSettingsFragment.Listener {
@@ -49,11 +49,15 @@ class ChatSettingsActivity : AppCompatActivity(), AiSettingsFragment.Listener {
                 val modelOnline = chat.modelOnline ?: providerRepository.modelOnline()
                 val promptId = chat.promptId ?: promptRepository.selectedPromptId()
                 val contextMode = chat.contextMode ?: providerRepository.contextMode()
+                val streamEnabled = chat.streamEnabled ?: providerRepository.streamEnabled()
 
                 supportFragmentManager.beginTransaction()
                     .replace(
                         R.id.settingsFragmentContainer,
-                        AiSettingsFragment.newInstance(providerId, modelOnline, promptId, false, contextMode)
+                        AiSettingsFragment.newInstance(
+                            providerId, modelOnline, promptId, false, contextMode,
+                            streamEnabled = streamEnabled
+                        )
                     )
                     .commit()
             }
@@ -76,6 +80,12 @@ class ChatSettingsActivity : AppCompatActivity(), AiSettingsFragment.Listener {
     override fun onModelOnlineChanged(enabled: Boolean) {
         lifecycleScope.launch {
             chatRepository.updateChatSettings(chatId, modelOnline = enabled)
+        }
+    }
+
+    override fun onStreamEnabledChanged(enabled: Boolean) {
+        lifecycleScope.launch {
+            chatRepository.updateChatSettings(chatId, streamEnabled = enabled)
         }
     }
 

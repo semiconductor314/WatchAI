@@ -118,8 +118,11 @@ class LeftPageFragment : Fragment() {
             val modelOnline = providerRepo.modelOnline()
             val promptId = promptRepo.selectedPromptId()
             val contextMode = providerRepo.contextMode()
+            val streamEnabled = providerRepo.streamEnabled()
 
-            val newChat = chatRepository.createChat("新聊天", providerId, modelOnline, promptId, contextMode)
+            val newChat = chatRepository.createChat(
+                "新聊天", providerId, modelOnline, promptId, contextMode, streamEnabled
+            )
             dataList.add(0, newChat)
             adapter.notifyItemInserted(0)
 

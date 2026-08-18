@@ -12,7 +12,8 @@ object ChatMapper {
             providerId = entity.providerId,
             modelOnline = entity.modelOnline,
             promptId = entity.promptId,
-            contextMode = entity.contextMode
+            contextMode = entity.contextMode,
+            streamEnabled = entity.streamEnabled
         )
     }
 
@@ -25,7 +26,8 @@ object ChatMapper {
             providerId = chat.providerId,
             modelOnline = chat.modelOnline,
             promptId = chat.promptId,
-            contextMode = chat.contextMode
+            contextMode = chat.contextMode,
+            streamEnabled = chat.streamEnabled
         )
     }
 

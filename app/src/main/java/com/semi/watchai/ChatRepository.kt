@@ -18,7 +18,8 @@ class ChatRepository(private val dao: ChatDao) {
                     providerId = entity.providerId,
                     modelOnline = entity.modelOnline,
                     promptId = entity.promptId,
-                    contextMode = entity.contextMode
+                    contextMode = entity.contextMode,
+                    streamEnabled = entity.streamEnabled
                 )
             }
         }
@@ -43,7 +44,8 @@ class ChatRepository(private val dao: ChatDao) {
             providerId = entity.providerId,
             modelOnline = entity.modelOnline,
             promptId = entity.promptId,
-            contextMode = entity.contextMode
+            contextMode = entity.contextMode,
+            streamEnabled = entity.streamEnabled
         )
     }
 
@@ -70,7 +72,8 @@ class ChatRepository(private val dao: ChatDao) {
         providerId: String? = null,
         modelOnline: Boolean? = null,
         promptId: String? = null,
-        contextMode: String? = null
+        contextMode: String? = null,
+        streamEnabled: Boolean? = null
     ): Chat {
         val chat = Chat(
             id = java.util.UUID.randomUUID().toString(),
@@ -78,7 +81,8 @@ class ChatRepository(private val dao: ChatDao) {
             providerId = providerId,
             modelOnline = modelOnline,
             promptId = promptId,
-            contextMode = contextMode
+            contextMode = contextMode,
+            streamEnabled = streamEnabled
         )
         dao.insertChat(
             ChatEntity(
@@ -88,7 +92,8 @@ class ChatRepository(private val dao: ChatDao) {
                 providerId = chat.providerId,
                 modelOnline = chat.modelOnline,
                 promptId = chat.promptId,
-                contextMode = chat.contextMode
+                contextMode = chat.contextMode,
+                streamEnabled = chat.streamEnabled
             )
         )
         return chat
@@ -113,13 +118,15 @@ class ChatRepository(private val dao: ChatDao) {
         providerId: String? = null,
         modelOnline: Boolean? = null,
         promptId: String? = null,
-        contextMode: String? = null
+        contextMode: String? = null,
+        streamEnabled: Boolean? = null
     ) {
         val entity = dao.getChatById(chatId) ?: return
         if (providerId != null) entity.providerId = providerId
         if (modelOnline != null) entity.modelOnline = modelOnline
         if (promptId != null) entity.promptId = promptId
         if (contextMode != null) entity.contextMode = contextMode
+        if (streamEnabled != null) entity.streamEnabled = streamEnabled
         dao.updateChat(entity)
     }
 
