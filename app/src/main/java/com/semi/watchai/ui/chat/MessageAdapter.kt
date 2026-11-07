@@ -7,6 +7,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.semi.watchai.R
 import com.semi.watchai.data.model.Message
+import com.semi.watchai.util.MathTextConverter
 
 class MessageAdapter(
     private val messages: MutableList<Message>
@@ -29,7 +30,8 @@ class MessageAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val message = messages[position]
-        holder.tvMessage.text = message.content
+        // 模型可能返回 LaTeX：渲染前统一转成可读 Unicode 文本（数据库仍存原文）
+        holder.tvMessage.text = MathTextConverter.toDisplay(message.content)
         holder.tvTime.text = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
             .format(java.util.Date(message.timestamp))
     }

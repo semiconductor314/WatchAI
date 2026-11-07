@@ -24,6 +24,7 @@ import com.semi.watchai.data.repository.ChatRepository
 import com.semi.watchai.data.repository.PromptRepository
 import com.semi.watchai.data.repository.ProviderRepository
 import com.semi.watchai.network.DeepSeekApi
+import com.semi.watchai.util.FeatureFlags
 import com.semi.watchai.util.MessageContextFilter
 import java.io.IOException
 import kotlinx.coroutines.delay
@@ -223,8 +224,9 @@ class ChatActivity : AppCompatActivity() {
                 val promptId = fresh?.promptId ?: promptRepository.selectedPromptId()
                 // 上下文选择：该对话已存 ?? 全局默认（CONTEXT_MODE_ALL）
                 val contextMode = fresh?.contextMode ?: providerRepository.contextMode()
-                // 流式输出：该对话已存 ?? 全局默认（默认开）
-                val streamEnabled = fresh?.streamEnabled ?: providerRepository.streamEnabled()
+                // 流式输出：该对话已存 ?? 全局默认（默认开）；总开关关闭时一律非流式
+                val streamEnabled = FeatureFlags.STREAMING_ENABLED &&
+                    (fresh?.streamEnabled ?: providerRepository.streamEnabled())
                 val systemPrompt = promptRepository.promptById(promptId).content
 
                 // 首页设置只作为"新建对话"的默认值：

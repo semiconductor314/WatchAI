@@ -31,6 +31,7 @@ import com.semi.watchai.data.model.Prompt
 import com.semi.watchai.data.model.supportsWebSearch
 import com.semi.watchai.data.repository.PromptRepository
 import com.semi.watchai.data.repository.ProviderRepository
+import com.semi.watchai.util.FeatureFlags
 import kotlinx.coroutines.launch
 
 /**
@@ -130,7 +131,7 @@ class AiSettingsFragment : Fragment() {
         view.findViewById<TextView>(R.id.tvSettingsTitle).text = title
         refreshModelOnlineRowVisibility(view)
         view.findViewById<View>(R.id.llStreamEnabledRow).visibility =
-            if (showStreamEnabled) View.VISIBLE else View.GONE
+            if (showStreamEnabled && FeatureFlags.STREAMING_ENABLED) View.VISIBLE else View.GONE
         view.findViewById<View>(R.id.llContextModeSection).visibility =
             if (showContextMode) View.VISIBLE else View.GONE
         view.findViewById<View>(R.id.llPromptSection).visibility =
