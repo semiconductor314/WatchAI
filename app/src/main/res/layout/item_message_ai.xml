@@ -15,12 +15,12 @@
         android:padding="12dp"
         android:maxWidth="280dp">
 
-        <TextView
-            android:id="@+id/tvMessage"
+        <!-- 内容容器：文本段落与公式行由 MathMessageContent 动态填充（见 ui/chat/MathMessageContent.kt） -->
+        <LinearLayout
+            android:id="@+id/llContent"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#FFFFFF"
-            android:textSize="15sp" />
+            android:orientation="vertical" />
 
         <TextView
             android:id="@+id/tvTime"

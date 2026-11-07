@@ -110,7 +110,7 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private fun setupRecyclerView() {
-        adapter = MessageAdapter(mutableListOf())
+        adapter = MessageAdapter(mutableListOf(), lifecycleScope)
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
 

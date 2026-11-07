@@ -17,6 +17,12 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // 只保留手表真机（arm64）与模拟器（x86_64）ABI，
+        // 丢掉 armeabi-v7a 可省 ~2.2MB 原生库（Wear OS 2 之后的设备均为 arm64）
+        ndk {
+            abiFilters += listOf("arm64-v8a", "x86_64")
+        }
     }
 
     buildTypes {
@@ -41,6 +47,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.androidx.recyclerview)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.ratex.android)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.core.ktx)
     implementation(libs.material)
