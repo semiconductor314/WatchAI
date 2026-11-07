@@ -156,4 +156,45 @@ class MathTextConverterTest {
     fun escaped_dollar_is_not_a_delimiter() {
         assertTrue(display("\\$5 一个").contains("5"))
     }
+
+    // ---------- 数学标签围栏：```latex 等不应被当成代码保护区 ----------
+
+    @Test
+    fun latex_fence_is_rendered() {
+        val raw = "```latex\nx = \\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}\n```"
+        assertEquals("x = (-b±√(b²-4ac))/2a", display(raw))
+    }
+
+    @Test
+    fun tex_math_katex_fences_are_rendered() {
+        assertEquals("a=b", display("```tex\na=b\n```"))
+        assertEquals("a=b", display("```math\na=b\n```"))
+        assertEquals("α ≤ β", display("```katex\n\\alpha \\le \\beta\n```"))
+    }
+
+    @Test
+    fun latex_fence_in_the_middle_of_text() {
+        assertEquals(
+            "例如：\n√(2)\n就是这样",
+            display("例如：\n```latex\n\\sqrt{2}\n```\n就是这样")
+        )
+    }
+
+    @Test
+    fun latex_fence_with_dollar_wrapper_is_rendered_once() {
+        assertEquals("a/b", display("```latex\n" + '$' + '$' + "\\frac{a}{b}" + '$' + '$' + "\n```"))
+        assertEquals("a/b", display("```latex\n" + '$' + "\\frac{a}{b}" + '$' + "\n```"))
+    }
+
+    @Test
+    fun other_language_fences_stay_protected() {
+        val raw = "```python\nx = Math.sqrt(2)\n```"
+        assertEquals(raw, display(raw))
+    }
+
+    @Test
+    fun untagged_fence_stays_protected() {
+        val raw = "```\n" + "\\frac{a}{b}" + "\n```"
+        assertEquals(raw, display(raw))
+    }
 }

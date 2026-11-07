@@ -23,15 +23,28 @@ object MathTextConverter {
      */
     fun toDisplay(raw: String, streaming: Boolean = false): String {
         if (raw.isEmpty()) return raw
-        if (!raw.contains('$') && !raw.contains("\\(") && !raw.contains("\\[")) return raw
+        if (!raw.contains('$') && !raw.contains("\\(") && !raw.contains("\\[") && !containsMathFence(raw)) {
+            return raw
+        }
 
         val out = StringBuilder(raw.length)
         var i = 0
         while (i < raw.length) {
-            // 1) 围栏代码块：原样保留
+            // 1) 围栏代码块：默认原样保留；
+            //    但 ```latex / ```tex / ```math 这类“数学围栏”里装的就是公式，按块级公式渲染
             if (raw.startsWith("```", i)) {
                 val end = raw.indexOf("```", i + 3)
                 if (end < 0) return tailOrDrop(out, raw, i, streaming)
+                val infoEnd = raw.indexOf('\n', i + 3)
+                if (infoEnd in (i + 3) until end) {
+                    val tag = raw.substring(i + 3, infoEnd).trim().lowercase()
+                    if (tag in MATH_FENCE_TAGS) {
+                        val body = stripMathDelimiters(raw.substring(infoEnd + 1, end))
+                        appendBlock(out, raw, end + 3, body)
+                        i = end + 3
+                        continue
+                    }
+                }
                 out.append(raw, i, end + 3)
                 i = end + 3
                 continue
@@ -147,6 +160,35 @@ object MathTextConverter {
     /** 抗误判：内容里带 LaTeX 特征才当数学。 */
     private fun looksLikeMath(inner: String): Boolean =
         inner.any { it == '\\' || it == '^' || it == '_' || it == '=' }
+
+    /** 数学围栏的语言标签（模型常用 ```latex / ```tex / ```math 包公式）。 */
+    private val MATH_FENCE_TAGS = setOf("latex", "tex", "math", "katex", "mathjax", "asciimath")
+
+    /**
+     * 快速路径判定辅助：文本里是否存在数学围栏。
+     * 纯 ```latex 围栏里没有 `$` / `\(` / `\[`，所以不能只看这三个字符。
+     */
+    private fun containsMathFence(raw: String): Boolean {
+        if (!raw.contains("```")) return false
+        return MATH_FENCE_TAGS.any { raw.contains("```" + it, ignoreCase = true) }
+    }
+
+    /** 去掉围栏内容自带的数学定界符（```latex 里常写成 $$…$$ 或 $…$）。 */
+    private fun stripMathDelimiters(s: String): String {
+        var t = s.trim()
+        for ((open, close) in listOf(
+            "\$\$" to "\$\$",
+            "\\[" to "\\]",
+            "\$" to "\$",
+            "\\(" to "\\)"
+        )) {
+            if (t.startsWith(open) && t.endsWith(close) && t.length > open.length + close.length) {
+                t = t.substring(open.length, t.length - close.length).trim()
+                break
+            }
+        }
+        return t
+    }
 
     // ------------------------------------------------------------------
     // 数学片段内的转换
