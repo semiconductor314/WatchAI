@@ -1,9 +1,11 @@
 package com.semi.watchai
 
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Button
+import androidx.appcompat.app.AppCompatActivity
+import com.semi.watchai.ui.home.LeftPageFragment
+import com.semi.watchai.ui.settings.OthersActivity
 
 class MainActivity : AppCompatActivity() {
 

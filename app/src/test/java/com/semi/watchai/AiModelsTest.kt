@@ -1,6 +1,10 @@
 package com.semi.watchai
 
 import com.google.gson.Gson
+import com.semi.watchai.data.model.AiModels
+import com.semi.watchai.data.model.AiProvider
+import com.semi.watchai.data.model.modelInfo
+import com.semi.watchai.data.model.supportsWebSearch
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

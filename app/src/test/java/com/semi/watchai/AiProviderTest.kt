@@ -1,5 +1,8 @@
 package com.semi.watchai
 
+import com.semi.watchai.data.model.AiProvider
+import com.semi.watchai.data.model.hasConfiguredApiKey
+import com.semi.watchai.data.model.scrubDefaultApiKey
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
