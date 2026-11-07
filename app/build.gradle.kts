@@ -18,14 +18,23 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // 只保留手表真机（arm64）与模拟器（x86_64）ABI，
-        // 丢掉 armeabi-v7a 可省 ~2.2MB 原生库（Wear OS 2 之后的设备均为 arm64）
+        // 原生库只打包会用到的 ABI：
+        // - arm64-v8a：Wear OS 3+ 真机
+        // - armeabi-v7a：32 位手表（当前真机调试目标）
+        // - x86_64：模拟器
         ndk {
-            abiFilters += listOf("arm64-v8a", "x86_64")
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
         }
     }
 
     buildTypes {
+        debug {
+            // 调试版包名加 .debug 后缀：与已安装的正式版（签名不同）共存，可同时安装。
+            // 注意：后缀只影响 applicationId，namespace/代码包名不变；但调试版有独立的
+            // 应用数据目录 —— 正式版的聊天记录不会出现在调试版里。
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
         release {
             optimization {
                 enable = false

@@ -34,37 +34,6 @@
         app:layout_constraintTop_toBottomOf="@id/dialSetting"
         app:layout_constraintBottom_toTopOf="@id/inputContainer" />
 
-    <!-- 流式输出区：AI 回复在此逐字显示（列表外部），流式期间列表完全不改动，
-         列表始终可自由滚动；长回复在区域内滚动，始终钉在最新内容 -->
-    <ScrollView
-        android:id="@+id/streamingContainer"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:visibility="gone"
-        android:maxHeight="140dp"
-        android:scrollbars="none"
-        android:focusable="false"
-        android:focusableInTouchMode="false"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/recyclerViewMessages"
-        app:layout_constraintBottom_toTopOf="@id/inputContainer"
-        app:layout_constraintVertical_bias="1">
-
-        <TextView
-            android:id="@+id/tvStreaming"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:layout_marginEnd="12dp"
-            android:layout_marginBottom="4dp"
-            android:background="@drawable/message_bubble_ai"
-            android:maxWidth="280dp"
-            android:padding="12dp"
-            android:textColor="#FFFFFF"
-            android:textSize="15sp" />
-    </ScrollView>
-
     <!-- 输入区域 -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/inputContainer"

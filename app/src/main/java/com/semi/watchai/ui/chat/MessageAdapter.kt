@@ -14,9 +14,6 @@ import com.semi.watchai.util.MathTextConverter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * 消息列表适配器。
@@ -24,31 +21,34 @@ import java.util.Locale
  * - 用户消息（[UserHolder]）：纯文本，经 [MathTextConverter] 把 LaTeX 降级为 Unicode。
  * - AI 消息（[AiHolder]）：内容由 [MathMessageContent] 动态构建 ——
  *   行内公式（放得下）走 span，放不下的公式独占一行并支持横向拖动查看。
+ * - "正在思考…" 占位：由 [showThinking] 在列表尾部追加一个**与 AI 气泡同款**的项，
+ *   不写入数据库；AI 回复到达后由 [replaceThinkingWith] 原地替换，失败时 [hideThinking] 移除。
  */
 class MessageAdapter(
     private val messages: MutableList<Message>,
     private val scope: CoroutineScope,
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-    private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+    /** 列表尾部是否正在显示"正在思考…"占位气泡。 */
+    private var thinking = false
 
-    /** 用户消息：布局不变，单 TextView。 */
+    /** 用户消息：主布局不变，单 TextView。 */
     private class UserHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val tvMessage: TextView = itemView.findViewById(R.id.tvMessage)
-        val tvTime: TextView = itemView.findViewById(R.id.tvTime)
     }
 
-    /** AI 消息：内容容器 + 时间；[token] 用于丢弃过期的异步构建结果。 */
+    /** AI 消息：内容容器；[token] 用于丢弃过期的异步构建结果。 */
     private class AiHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val llContent: LinearLayout = itemView.findViewById(R.id.llContent)
-        val tvTime: TextView = itemView.findViewById(R.id.tvTime)
         var job: Job? = null
         var token: Any? = null
     }
 
-    override fun getItemCount(): Int = messages.size
+    override fun getItemCount(): Int = messages.size + if (thinking) 1 else 0
 
-    override fun getItemViewType(position: Int): Int = if (messages[position].isUser) TYPE_USER else TYPE_AI
+    /** 占位项（索引 = messages.size）按 AI 气泡类型渲染。 */
+    override fun getItemViewType(position: Int): Int =
+        if (position < messages.size && messages[position].isUser) TYPE_USER else TYPE_AI
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
@@ -60,17 +60,10 @@ class MessageAdapter(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        val message = messages[position]
+        val raw = if (position < messages.size) messages[position].content else THINKING_TEXT
         when (holder) {
-            is UserHolder -> {
-                holder.tvMessage.text = MathTextConverter.toDisplay(message.content)
-                holder.tvTime.text = timeFormat.format(Date(message.timestamp))
-            }
-
-            is AiHolder -> {
-                holder.tvTime.text = timeFormat.format(Date(message.timestamp))
-                bindAiContent(holder, message)
-            }
+            is UserHolder -> holder.tvMessage.text = MathTextConverter.toDisplay(raw)
+            is AiHolder -> bindAiContent(holder, raw)
         }
     }
 
@@ -78,7 +71,7 @@ class MessageAdapter(
      * AI 内容需要异步测量（RaTeX 解析在后台），因此先清空、再在结果回来时填充；
      * 用 [AiHolder.token] 防止快速滚动/复用导致的错位。
      */
-    private fun bindAiContent(holder: AiHolder, message: Message) {
+    private fun bindAiContent(holder: AiHolder, raw: String) {
         holder.job?.cancel()
         holder.llContent.removeAllViews()
 
@@ -86,7 +79,6 @@ class MessageAdapter(
         holder.token = token
         val context = holder.itemView.context
         val availableWidthPx = availableContentWidthPx(context)
-        val raw = message.content
 
         holder.job = scope.launch {
             val content = MathMessageContent.build(context, raw, availableWidthPx)
@@ -117,6 +109,34 @@ class MessageAdapter(
         notifyDataSetChanged()
     }
 
+    /** 在列表尾部追加"正在思考…"气泡（幂等）。 */
+    fun showThinking() {
+        if (thinking) return
+        thinking = true
+        notifyItemInserted(messages.size)
+    }
+
+    /** 移除"正在思考…"气泡（请求失败或已替换时调用，幂等）。 */
+    fun hideThinking() {
+        if (!thinking) return
+        thinking = false
+        notifyItemRemoved(messages.size)
+    }
+
+    /**
+     * AI 回复到达：把"正在思考…"气泡**原地替换**成真实回复，
+     * 索引不变，因此不会有插入/移除动画造成的闪烁。
+     */
+    fun replaceThinkingWith(message: Message) {
+        if (!thinking) {
+            addMessage(message)
+            return
+        }
+        thinking = false
+        messages.add(message)
+        notifyItemChanged(messages.size - 1)
+    }
+
     /**
      * 气泡内可用宽度：屏幕宽 − 列表项左右 padding(12dp×2) − 气泡内 padding(12dp×2)，
      * 且不超过气泡的 maxWidth(280dp)。
@@ -139,5 +159,6 @@ class MessageAdapter(
     private companion object {
         const val TYPE_USER = 0
         const val TYPE_AI = 1
+        const val THINKING_TEXT = "正在思考…"
     }
 }

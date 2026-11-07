@@ -5,10 +5,9 @@ import android.os.Bundle
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.ImageButton
-import android.widget.ScrollView
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -24,10 +23,8 @@ import com.semi.watchai.data.repository.ChatRepository
 import com.semi.watchai.data.repository.PromptRepository
 import com.semi.watchai.data.repository.ProviderRepository
 import com.semi.watchai.network.DeepSeekApi
-import com.semi.watchai.util.FeatureFlags
 import com.semi.watchai.util.MessageContextFilter
 import java.io.IOException
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class ChatActivity : AppCompatActivity() {
@@ -43,8 +40,6 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var etInput: EditText
     private lateinit var btnSend: ImageButton
     private lateinit var btnBack: View
-    private lateinit var streamingContainer: ScrollView
-    private lateinit var tvStreaming: TextView
 
     // 同步防重入：进入 sendMessage 立即置 true，请求结束（finally）才复位，
     // 关闭双击/表冠确认在异步 DB 写入窗口内触发第二次发送的竞态
@@ -85,8 +80,6 @@ class ChatActivity : AppCompatActivity() {
         etInput = findViewById(R.id.etInput)
         btnSend = findViewById(R.id.btnSend)
         btnBack = findViewById(R.id.dialSetting)
-        streamingContainer = findViewById(R.id.streamingContainer)
-        tvStreaming = findViewById(R.id.tvStreaming)
     }
 
     private fun loadChat() {
@@ -169,10 +162,11 @@ class ChatActivity : AppCompatActivity() {
         val text = etInput.text.toString().trim()
         if (text.isEmpty() || aiRequestInFlight) return
 
-        // 同步进入"请求中"：立即禁用发送 + 防重入，避免重复发送产生重复回复
+        // 同步进入“请求中”：立即禁用发送 + 防重入，避免重复发送产生重复回复
         aiRequestInFlight = true
         btnSend.isEnabled = false
-        showStreaming("正在思考…")
+        // 收起输入法并让焦点回到列表（否则会一直停留在输入法界面）
+        hideKeyboard()
 
         val userMessage = Message(content = text, isUser = true)
 
@@ -181,6 +175,8 @@ class ChatActivity : AppCompatActivity() {
                 chatRepository.addMessage(chatId, userMessage)
                 chat.messages.add(userMessage)
                 adapter.addMessage(userMessage)
+                // 用户气泡出现后，再在尾部追加与 AI 气泡同款的“正在思考…”占位（回复到达即原地替换）
+                adapter.showThinking()
                 scrollToBottom()
 
                 etInput.text.clear()
@@ -224,9 +220,6 @@ class ChatActivity : AppCompatActivity() {
                 val promptId = fresh?.promptId ?: promptRepository.selectedPromptId()
                 // 上下文选择：该对话已存 ?? 全局默认（CONTEXT_MODE_ALL）
                 val contextMode = fresh?.contextMode ?: providerRepository.contextMode()
-                // 流式输出：该对话已存 ?? 全局默认（默认开）；总开关关闭时一律非流式
-                val streamEnabled = FeatureFlags.STREAMING_ENABLED &&
-                    (fresh?.streamEnabled ?: providerRepository.streamEnabled())
                 val systemPrompt = promptRepository.promptById(promptId).content
 
                 // 首页设置只作为"新建对话"的默认值：
@@ -236,105 +229,31 @@ class ChatActivity : AppCompatActivity() {
                     (fresh.providerId != provider.id ||
                         fresh.modelOnline != modelOnline ||
                         fresh.promptId != promptId ||
-                        fresh.contextMode != contextMode ||
-                        fresh.streamEnabled != streamEnabled)
+                        fresh.contextMode != contextMode)
                 ) {
                     chatRepository.updateChatSettings(
                         chatId,
                         providerId = provider.id,
                         modelOnline = modelOnline,
                         promptId = promptId,
-                        contextMode = contextMode,
-                        streamEnabled = streamEnabled
+                        contextMode = contextMode
                     )
                 }
 
-                // 按上下文选择模式裁剪历史后再发送
+                // 按上下文选择模式裁剪历史后再发送（流式输出已全局关闭，见 util/FeatureFlags）
                 val requestMessages = MessageContextFilter.filter(chat.messages, contextMode)
-                var reply: String? = null
-                var interrupted = false
-                if (streamEnabled) {
-                    // 流式：思考链与正文分路累积，在列表外的 tvStreaming 中按固定节奏逐字揭示。
-                    // 流式期间完全不碰 RecyclerView —— 列表随时可自由滚动，
-                    // 也没有列表内长文本不断重排的布局风暴
-                    val thinkingSb = StringBuilder()
-                    val contentSb = StringBuilder()
-                    val displaySb = StringBuilder()   // 已揭示到屏幕的文本
-                    var contentStarted = false
-                    var streamDone = false
-                    var streamError: Exception? = null
-
-                    // 生产者：只累积文本，不做 UI 操作
-                    launch {
-                        try {
-                            DeepSeekApi.chatCompletionStream(
-                                provider.baseUrl,
-                                provider.apiKey,
-                                requestMessages,
-                                webSearch,
-                                systemPrompt
-                            ).collect { event ->
-                                when (event) {
-                                    is DeepSeekApi.StreamEvent.Reasoning ->
-                                        thinkingSb.append(event.text)
-                                    is DeepSeekApi.StreamEvent.Content ->
-                                        contentSb.append(event.text)
-                                }
-                            }
-                        } catch (e: Exception) {
-                            streamError = e
-                        } finally {
-                            streamDone = true
-                        }
-                    }
-
-                    // 渲染器：每 60ms 揭示至多 4 个字符；正文开始后丢弃思考文本改显正文
-                    while (true) {
-                        if (contentSb.isNotEmpty() && !contentStarted) {
-                            contentStarted = true
-                            displaySb.setLength(0)
-                        }
-                        val source = if (contentStarted) contentSb else thinkingSb
-                        val revealed = displaySb.length
-                        val revealCount = minOf(4, source.length - revealed)
-                        if (revealCount > 0) {
-                            displaySb.append(source, revealed, revealed + revealCount)
-                        }
-                        showStreaming(displaySb.toString().ifEmpty { "正在思考…" })
-                        // 失败且无正文：尽快退出；否则等流完成且已全部揭示完再退出
-                        if (streamError != null && contentSb.isEmpty()) break
-                        if (streamDone && displaySb.length >= source.length) break
-                        delay(60)
-                    }
-
-                    if (streamError != null) {
-                        // 已累积部分正文：保留部分回复并提示中断；否则视为失败走外层 catch
-                        if (contentSb.isNotEmpty()) {
-                            interrupted = true
-                            reply = contentSb.toString()
-                        } else {
-                            throw streamError!!
-                        }
-                    } else {
-                        reply = contentSb.toString()
-                    }
-                } else {
-                    reply = DeepSeekApi.chatCompletion(
-                        provider.baseUrl,
-                        provider.apiKey,
-                        requestMessages,
-                        webSearch,
-                        systemPrompt
-                    )
-                }
+                val reply = DeepSeekApi.chatCompletion(
+                    provider.baseUrl,
+                    provider.apiKey,
+                    requestMessages,
+                    webSearch,
+                    systemPrompt
+                )
                 val finalReply = reply ?: throw IOException("响应缺少内容")
                 if (finalReply.isEmpty()) throw IOException("响应缺少内容")
-                if (interrupted) {
-                    Toast.makeText(this@ChatActivity, "回复中断，已保留部分内容", Toast.LENGTH_LONG).show()
-                }
-                // 流式/非流式结束：一次性把完整回复作为新消息加入列表并入库
+                // 回复结束：把“正在思考…”占位气泡原地替换为真实回复并入库
                 val aiMessage = Message(content = finalReply, isUser = false)
-                adapter.addMessage(aiMessage)
+                adapter.replaceThinkingWith(aiMessage)
                 chatRepository.addMessage(chatId, aiMessage)
                 chat.messages.add(aiMessage)
             } catch (e: Exception) {
@@ -356,21 +275,19 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
-    // 显示/更新流式区域文本，并钉在底部（长回复在区域内滚动时始终看到最新内容）。
-    // 同时把焦点还给消息列表，保证滚轮滚动列表而不是流式区
-    private fun showStreaming(text: String) {
-        streamingContainer.visibility = View.VISIBLE
-        tvStreaming.text = text
+    /** 收起输入法并把焦点还给消息列表（表冠滚轮持续可用）。 */
+    private fun hideKeyboard() {
+        val imm = getSystemService(InputMethodManager::class.java)
+        imm?.hideSoftInputFromWindow(etInput.windowToken, 0)
+        etInput.clearFocus()
         recyclerView.requestFocus()
-        streamingContainer.post { streamingContainer.fullScroll(View.FOCUS_DOWN) }
     }
 
-    // 请求结束（成功/失败/中断）恢复发送状态，隐藏流式区域，焦点还给消息列表
+    // 请求结束（成功/失败/中断）恢复发送状态，移除遗留的“正在思考…”占位气泡
     private fun resetSendState() {
         aiRequestInFlight = false
         btnSend.isEnabled = true
-        streamingContainer.visibility = View.GONE
-        tvStreaming.text = ""
+        adapter.hideThinking()
         recyclerView.requestFocus()
     }
 
