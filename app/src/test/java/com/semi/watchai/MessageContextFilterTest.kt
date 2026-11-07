@@ -1,5 +1,8 @@
 package com.semi.watchai
 
+import com.semi.watchai.data.model.Message
+import com.semi.watchai.data.repository.ProviderRepository
+import com.semi.watchai.util.MessageContextFilter
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

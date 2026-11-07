@@ -37,37 +37,37 @@
         </activity>
 
         <activity
-            android:name=".OthersActivity"
+            android:name=".ui.settings.OthersActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.NoActionBar" />
 
         <activity
-            android:name=".DefaultSettingsActivity"
+            android:name=".ui.settings.DefaultSettingsActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.NoActionBar" />
 
         <activity
-            android:name=".ModelLibraryActivity"
+            android:name=".ui.settings.ModelLibraryActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.NoActionBar" />
 
         <activity
-            android:name=".PromptSettingsActivity"
+            android:name=".ui.settings.PromptSettingsActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.NoActionBar" />
 
         <activity
-            android:name=".AboutActivity"
+            android:name=".ui.about.AboutActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.NoActionBar" />
 
         <activity
-            android:name=".ChatActivity"
+            android:name=".ui.chat.ChatActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.NoActionBar" />
 
         <activity
-            android:name=".ChatSettingsActivity"
+            android:name=".ui.chat.ChatSettingsActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.NoActionBar" />
 

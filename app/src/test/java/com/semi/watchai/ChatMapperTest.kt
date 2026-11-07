@@ -1,5 +1,8 @@
 package com.semi.watchai
 
+import com.semi.watchai.data.local.entity.ChatEntity
+import com.semi.watchai.data.model.Chat
+import com.semi.watchai.data.model.ChatMapper
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
