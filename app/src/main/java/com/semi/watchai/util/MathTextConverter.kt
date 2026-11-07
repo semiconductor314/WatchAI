@@ -15,6 +15,172 @@ package com.semi.watchai.util
  */
 object MathTextConverter {
 
+    /** 一段消息切分后的片段类型（供 UI 决定用行内 span 还是独立可横滑窗口）。 */
+    sealed interface Segment {
+        /** 该片段在原文中的原始文本（含定界符 / 围栏标记）。 */
+        val raw: String
+
+        /** 普通文本（含受保护的代码块）。 */
+        data class Text(override val raw: String) : Segment
+
+        /** 行内公式（`$…$` / `\(…\)`），[latex] 为去掉定界符后的源码。 */
+        data class Inline(override val raw: String, val latex: String) : Segment
+
+        /** 块级公式（`$$…$$` / `\[…\]` / ```latex 围栏），[latex] 为去掉定界符与围栏后的源码。 */
+        data class Block(override val raw: String, val latex: String) : Segment
+    }
+
+    /**
+     * 把原文切分为「文本 / 行内公式 / 块级公式」片段，保证不丢字符：
+     * 所有片段的 [Segment.raw] 拼起来等于原文（流式模式下被丢弃的未闭合尾巴除外）。
+     *
+     * @param streaming true 时尾部未闭合的数学片段整段丢弃。
+     */
+    fun segments(raw: String, streaming: Boolean = false): List<Segment> {
+        if (raw.isEmpty()) return emptyList()
+        if (!raw.contains('$') && !raw.contains("\\(") && !raw.contains("\\[") && !containsMathFence(raw)) {
+            return listOf(Segment.Text(raw))
+        }
+
+        val out = ArrayList<Segment>()
+        var textStart = 0
+        var i = 0
+        var aborted = false
+
+        while (i < raw.length) {
+            // 1) 围栏代码块：数学标签围栏算块级公式，其余原样归入文本
+            if (raw.startsWith("```", i)) {
+                val end = raw.indexOf("```", i + 3)
+                if (end < 0) {
+                    if (streaming) {
+                        aborted = true
+                        break
+                    }
+                    i = raw.length
+                    break
+                }
+                val infoEnd = raw.indexOf('\n', i + 3)
+                if (infoEnd in (i + 3) until end) {
+                    val tag = raw.substring(i + 3, infoEnd).trim().lowercase()
+                    if (tag in MATH_FENCE_TAGS) {
+                        if (i > textStart) out.add(Segment.Text(raw.substring(textStart, i)))
+                        out.add(
+                            Segment.Block(
+                                raw = raw.substring(i, end + 3),
+                                latex = stripMathDelimiters(raw.substring(infoEnd + 1, end))
+                            )
+                        )
+                        i = end + 3
+                        textStart = i
+                        continue
+                    }
+                }
+                i = end + 3
+                continue
+            }
+            // 2) 行内代码：归入文本，不扫描其内部
+            if (raw[i] == '`') {
+                val end = raw.indexOf('`', i + 1)
+                if (end < 0) {
+                    if (streaming) {
+                        aborted = true
+                        break
+                    }
+                    i = raw.length
+                    break
+                }
+                i = end + 1
+                continue
+            }
+            // 3) 转义的美元符：跳过，不当定界符
+            if (raw[i] == '\\' && i + 1 < raw.length && raw[i + 1] == '$') {
+                i += 2
+                continue
+            }
+            // 4) 块级：$$…$$
+            if (raw.startsWith("$$", i)) {
+                val end = raw.indexOf("$$", i + 2)
+                if (end < 0) {
+                    if (streaming) {
+                        aborted = true
+                        break
+                    }
+                    i = raw.length
+                    break
+                }
+                if (i > textStart) out.add(Segment.Text(raw.substring(textStart, i)))
+                out.add(Segment.Block(raw.substring(i, end + 2), raw.substring(i + 2, end)))
+                i = end + 2
+                textStart = i
+                continue
+            }
+            // 5) 块级：\[…\]
+            if (raw.startsWith("\\[", i)) {
+                val end = raw.indexOf("\\]", i + 2)
+                if (end < 0) {
+                    if (streaming) {
+                        aborted = true
+                        break
+                    }
+                    i = raw.length
+                    break
+                }
+                if (i > textStart) out.add(Segment.Text(raw.substring(textStart, i)))
+                out.add(Segment.Block(raw.substring(i, end + 2), raw.substring(i + 2, end)))
+                i = end + 2
+                textStart = i
+                continue
+            }
+            // 6) 行内：\(…\)
+            if (raw.startsWith("\\(", i)) {
+                val end = raw.indexOf("\\)", i + 2)
+                if (end < 0) {
+                    if (streaming) {
+                        aborted = true
+                        break
+                    }
+                    i = raw.length
+                    break
+                }
+                if (i > textStart) out.add(Segment.Text(raw.substring(textStart, i)))
+                out.add(Segment.Inline(raw.substring(i, end + 2), raw.substring(i + 2, end)))
+                i = end + 2
+                textStart = i
+                continue
+            }
+            // 7) 行内：$…$（需通过"像数学"判定，避免吃掉金额）
+            if (raw[i] == '$') {
+                val end = findInlineDollarEnd(raw, i + 1)
+                if (end < 0) {
+                    if (streaming) {
+                        aborted = true
+                        break
+                    }
+                    i = raw.length
+                    break
+                }
+                val inner = raw.substring(i + 1, end)
+                if (looksLikeMath(inner)) {
+                    if (i > textStart) out.add(Segment.Text(raw.substring(textStart, i)))
+                    out.add(Segment.Inline(raw.substring(i, end + 1), inner))
+                    i = end + 1
+                    textStart = i
+                    continue
+                }
+                i = end + 1
+                continue
+            }
+            i++
+        }
+
+        if (aborted) {
+            if (i > textStart) out.add(Segment.Text(raw.substring(textStart, i)))
+            return out
+        }
+        if (raw.length > textStart) out.add(Segment.Text(raw.substring(textStart)))
+        return out
+    }
+
     /**
      * 把模型返回的原始文本转换为可直接放进 TextView 的展示文本。
      *
@@ -23,121 +189,40 @@ object MathTextConverter {
      */
     fun toDisplay(raw: String, streaming: Boolean = false): String {
         if (raw.isEmpty()) return raw
-        if (!raw.contains('$') && !raw.contains("\\(") && !raw.contains("\\[") && !containsMathFence(raw)) {
-            return raw
-        }
+        val list = segments(raw, streaming)
+        if (list.isEmpty()) return ""
 
         val out = StringBuilder(raw.length)
-        var i = 0
-        while (i < raw.length) {
-            // 1) 围栏代码块：默认原样保留；
-            //    但 ```latex / ```tex / ```math 这类“数学围栏”里装的就是公式，按块级公式渲染
-            if (raw.startsWith("```", i)) {
-                val end = raw.indexOf("```", i + 3)
-                if (end < 0) return tailOrDrop(out, raw, i, streaming)
-                val infoEnd = raw.indexOf('\n', i + 3)
-                if (infoEnd in (i + 3) until end) {
-                    val tag = raw.substring(i + 3, infoEnd).trim().lowercase()
-                    if (tag in MATH_FENCE_TAGS) {
-                        val body = stripMathDelimiters(raw.substring(infoEnd + 1, end))
-                        appendBlock(out, raw, end + 3, body)
-                        i = end + 3
-                        continue
+        for ((index, seg) in list.withIndex()) {
+            when (seg) {
+                is Segment.Text -> out.append(seg.raw)
+                is Segment.Inline -> out.append(toPlainMath(seg.latex))
+                is Segment.Block -> {
+                    val text = toPlainMath(seg.latex).lines()
+                        .joinToString("\n") { it.trimEnd() }
+                        .trim()
+                    if (text.isEmpty()) continue
+                    // 块级公式单独成行：只在必要时补前导/尾随换行，并抹掉悬空空格
+                    if (out.isNotEmpty() && out.last() != '\n') {
+                        while (out.isNotEmpty() && out.last() == ' ') out.deleteCharAt(out.length - 1)
+                        out.append('\n')
                     }
+                    out.append(text)
+                    val next = list.getOrNull(index + 1)?.raw?.firstOrNull()
+                    if (next != null && next != '\n') out.append('\n')
                 }
-                out.append(raw, i, end + 3)
-                i = end + 3
-                continue
             }
-            // 2) 行内代码：原样保留
-            if (raw[i] == '`') {
-                val end = raw.indexOf('`', i + 1)
-                if (end < 0) return tailOrDrop(out, raw, i, streaming)
-                out.append(raw, i, end + 1)
-                i = end + 1
-                continue
-            }
-            // 3) 转义的美元符：\$ → $
-            if (raw[i] == '\\' && i + 1 < raw.length && raw[i + 1] == '$') {
-                out.append('$')
-                i += 2
-                continue
-            }
-            // 4) 块级：$$…$$ 与 \[…\]
-            if (raw.startsWith("$$", i)) {
-                val end = raw.indexOf("$$", i + 2)
-                if (end < 0) return tailOrDrop(out, raw, i, streaming)
-                appendBlock(out, raw, end + 2, raw.substring(i + 2, end))
-                i = end + 2
-                continue
-            }
-            if (raw.startsWith("\\[", i)) {
-                val end = raw.indexOf("\\]", i + 2)
-                if (end < 0) return tailOrDrop(out, raw, i, streaming)
-                appendBlock(out, raw, end + 2, raw.substring(i + 2, end))
-                i = end + 2
-                continue
-            }
-            // 5) 行内：\(…\)
-            if (raw.startsWith("\\(", i)) {
-                val end = raw.indexOf("\\)", i + 2)
-                if (end < 0) return tailOrDrop(out, raw, i, streaming)
-                appendInline(out, raw.substring(i + 2, end))
-                i = end + 2
-                continue
-            }
-            // 6) 行内：$…$（需通过"像数学"判定，避免吃掉金额）
-            if (raw[i] == '$') {
-                val end = findInlineDollarEnd(raw, i + 1)
-                if (end < 0) return tailOrDrop(out, raw, i, streaming)
-                val inner = raw.substring(i + 1, end)
-                if (looksLikeMath(inner)) {
-                    appendInline(out, inner)
-                } else {
-                    out.append(raw, i, end + 1)
-                }
-                i = end + 1
-                continue
-            }
-            // 7) 普通字符
-            out.append(raw[i])
-            i++
         }
         return out.toString()
     }
+
+    /** 单个 LaTeX 公式 → Unicode 纯文本（供 UI 层在 RaTeX 解析失败时做回退）。 */
+    fun toPlainMath(latex: String): String = convertMath(latex).trim()
 
     // ------------------------------------------------------------------
     // 外层切分辅助
     // ------------------------------------------------------------------
 
-    /** 未闭合片段的收尾：非流式保留原文（不丢内容），流式则整段丢弃。 */
-    private fun tailOrDrop(out: StringBuilder, raw: String, from: Int, streaming: Boolean): String {
-        if (!streaming) out.append(raw, from, raw.length)
-        return out.toString()
-    }
-
-    /** 行内数学：转换 + 去首尾空白后直接拼接。 */
-    private fun appendInline(out: StringBuilder, math: String) {
-        out.append(convertMath(math).trim())
-    }
-
-    /**
-     * 块级数学：转换后单独成行。
-     * 只在"上一字符不是换行"时补前导换行、"下一个原始字符不是换行且不是文末"时补尾随换行，
-     * 避免出现多余空行；插入前导换行时先抹掉行尾空白，避免"公式： \n"这种悬空空格。
-     */
-    private fun appendBlock(out: StringBuilder, raw: String, nextIndex: Int, math: String) {
-        val text = convertMath(math).trim()
-            .lines().joinToString("\n") { it.trimEnd() }
-            .trim()
-        if (text.isEmpty()) return
-        if (out.isNotEmpty() && out.last() != '\n') {
-            while (out.isNotEmpty() && out.last() == ' ') out.deleteCharAt(out.length - 1)
-            out.append('\n')
-        }
-        out.append(text)
-        if (nextIndex < raw.length && raw[nextIndex] != '\n') out.append('\n')
-    }
 
     /** 找 `$…$` 的闭合位置；遇到 `$$` 视为块级开头，放弃行内判定。 */
     private fun findInlineDollarEnd(raw: String, from: Int): Int {

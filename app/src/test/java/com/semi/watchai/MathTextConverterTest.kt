@@ -182,8 +182,8 @@ class MathTextConverterTest {
 
     @Test
     fun latex_fence_with_dollar_wrapper_is_rendered_once() {
-        assertEquals("a/b", display("```latex\n" + '$' + '$' + "\\frac{a}{b}" + '$' + '$' + "\n```"))
-        assertEquals("a/b", display("```latex\n" + '$' + "\\frac{a}{b}" + '$' + "\n```"))
+        assertEquals("a/b", display("```latex\n" + '\$' + '\$' + "\\frac{a}{b}" + '\$' + '\$' + "\n```"))
+        assertEquals("a/b", display("```latex\n" + '\$' + "\\frac{a}{b}" + '\$' + "\n```"))
     }
 
     @Test
