@@ -25,4 +25,18 @@
 
     </LinearLayout>
 
+    <!-- 重新加载：重发这条用户消息（icon only，见 ChatActivity.reloadMessage） -->
+    <ImageButton
+        android:id="@+id/btnReload"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:src="@drawable/ic_reload"
+        android:contentDescription="重新加载"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:padding="5dp"
+        android:scaleType="fitCenter"
+        android:alpha="0.65"
+        android:focusable="false"
+        android:focusableInTouchMode="false" />
+
 </LinearLayout>

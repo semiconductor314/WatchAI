@@ -58,6 +58,10 @@ interface ChatDao {
     @Query("DELETE FROM messages WHERE chatId = :chatId")
     suspend fun deleteMessagesByChatId(chatId: String)
 
+    // 「重新加载」：按 id 批量删除被截断的消息（不按 timestamp，避免同毫秒误删）
+    @Query("DELETE FROM messages WHERE id IN (:ids)")
+    suspend fun deleteMessagesByIds(ids: List<String>)
+
     // ========== 联合查询 ==========
 
     @Query("""
