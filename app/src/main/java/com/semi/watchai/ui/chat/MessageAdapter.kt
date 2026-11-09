@@ -27,14 +27,16 @@ import kotlinx.coroutines.launch
 class MessageAdapter(
     private val messages: MutableList<Message>,
     private val scope: CoroutineScope,
+    private val onReload: (index: Int) -> Unit = {},
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     /** 列表尾部是否正在显示"正在思考…"占位气泡。 */
     private var thinking = false
 
-    /** 用户消息：主布局不变，单 TextView。 */
+    /** 用户消息：主布局不变，单 TextView + 气泡下方的"重新加载"图标按钮。 */
     private class UserHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val tvMessage: TextView = itemView.findViewById(R.id.tvMessage)
+        val btnReload: View = itemView.findViewById(R.id.btnReload)
     }
 
     /** AI 消息：内容容器；[token] 用于丢弃过期的异步构建结果。 */
@@ -62,7 +64,15 @@ class MessageAdapter(
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val raw = if (position < messages.size) messages[position].content else THINKING_TEXT
         when (holder) {
-            is UserHolder -> holder.tvMessage.text = MathTextConverter.toDisplay(raw)
+            is UserHolder -> {
+                holder.tvMessage.text = MathTextConverter.toDisplay(raw)
+                holder.btnReload.setOnClickListener {
+                    // 点击时才读位置（bind 时的 position 在滚动后会过期）；
+                    // 越界 = 点到了尾部"正在思考…"占位项，忽略
+                    val pos = holder.bindingAdapterPosition
+                    if (pos != RecyclerView.NO_POSITION && pos < messages.size) onReload(pos)
+                }
+            }
             is AiHolder -> bindAiContent(holder, raw)
         }
     }
@@ -135,6 +145,19 @@ class MessageAdapter(
         thinking = false
         messages.add(message)
         notifyItemChanged(messages.size - 1)
+    }
+
+    /**
+     * 「重新加载」时移除 index 之后的全部消息项（含尾部"正在思考…"占位）。
+     * 必须先摘掉占位，否则 notifyItemRangeRemoved 的计数会多算一项。
+     */
+    fun truncateAfter(index: Int) {
+        hideThinking()
+        if (index < 0 || index >= messages.size) return
+        val removeCount = messages.size - index - 1
+        if (removeCount <= 0) return
+        repeat(removeCount) { messages.removeAt(messages.size - 1) }
+        notifyItemRangeRemoved(index + 1, removeCount)
     }
 
     /**
