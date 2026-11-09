@@ -23,6 +23,7 @@ import com.semi.watchai.data.repository.ChatRepository
 import com.semi.watchai.data.repository.PromptRepository
 import com.semi.watchai.data.repository.ProviderRepository
 import com.semi.watchai.network.DeepSeekApi
+import com.semi.watchai.util.ChatTruncation
 import com.semi.watchai.util.MessageContextFilter
 import java.io.IOException
 import kotlinx.coroutines.launch
@@ -103,7 +104,7 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private fun setupRecyclerView() {
-        adapter = MessageAdapter(mutableListOf(), lifecycleScope)
+        adapter = MessageAdapter(mutableListOf(), lifecycleScope) { index -> reloadMessage(index) }
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
 
@@ -263,6 +264,40 @@ class ChatActivity : AppCompatActivity() {
                 resetSendState()
                 scrollToBottom()
             }
+        }
+    }
+
+    /**
+     * 「重新加载」：删除第 index 条用户消息之后的全部消息，然后把它重新发给 AI。
+     * 复用 [requestAIResponse]（截断后 chat.messages 的最后一条正是这条用户消息，
+     * MessageContextFilter 自然裁到正确历史），不改标题。
+     */
+    private fun reloadMessage(index: Int) {
+        // 同步防重入：与发送键同源，请求进行中静默忽略（不做逐项置灰）
+        if (aiRequestInFlight) return
+        if (index !in chat.messages.indices) return
+        if (!chat.messages[index].isUser) return
+
+        aiRequestInFlight = true
+        btnSend.isEnabled = false
+        hideKeyboard()
+
+        val toDelete = ChatTruncation.afterIndex(chat.messages, index)
+
+        lifecycleScope.launch {
+            try {
+                chatRepository.deleteMessages(toDelete.map { it.id })
+                if (toDelete.isNotEmpty()) chat.messages.removeAll(toDelete.toSet())
+                adapter.truncateAfter(index)
+            } catch (e: Exception) {
+                android.util.Log.e("ChatActivity", "重新加载-删除消息失败: ${e.message}", e)
+                Toast.makeText(this@ChatActivity, "重新加载失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                resetSendState()
+                return@launch
+            }
+            adapter.showThinking()
+            scrollToBottom()
+            requestAIResponse()
         }
     }
 

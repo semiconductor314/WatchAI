@@ -153,6 +153,12 @@ class ChatRepository(private val dao: ChatDao) {
         dao.insertMessage(msgEntity)
     }
 
+    // 「重新加载」：删除被截断的消息（空列表直接返回，避免空 IN 查询）
+    suspend fun deleteMessages(ids: List<String>) {
+        if (ids.isEmpty()) return
+        dao.deleteMessagesByIds(ids)
+    }
+
     // ========== 批量操作 ==========
 
     // 删除所有聊天
